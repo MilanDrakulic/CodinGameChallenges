@@ -34,15 +34,6 @@ namespace Pacman
 			return Cooldown == 0;
 		}
 
-		//public bool CanActivateSpeed()
-		//{
-		//	return Common.CurrentTurn - SpeedActivatedTurn > Common.SpeedCooldownDuration;
-		//}
-		//public bool CanActivateSwitch()
-		//{
-		//	return Common.CurrentTurn - SwitchActivatedTurn > Common.SwitchCooldownDuration;
-		//}
-
 		public void ActivateSpeed()
 		{
 			Console.WriteLine("SPEED " + this.Id.ToString());

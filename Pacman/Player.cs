@@ -26,6 +26,8 @@ namespace Pacman
             // game loop
             while (true)
             {
+                Common.CurrentTurn++;
+
                 inputs = Console.ReadLine().Split(' ');
                 int myScore = int.Parse(inputs[0]);
                 int opponentScore = int.Parse(inputs[1]);
@@ -80,12 +82,6 @@ namespace Pacman
                 }
                 Console.WriteLine(output);
 
-                //for (int i = 0; i < PacController.pacs.Count; i++)
-                //{
-                //    Logic.SetTarget(PacController.pacs[i]);
-                //    Console.WriteLine("MOVE " + PacController.pacs[i].Id.ToString() + " " + Logic.CurrentTargets[PacController.pacs[i].Id].ToString());
-                //    //Console.WriteLine("MOVE 0 15 10"); // MOVE <pacId> <x> <y>
-                //}
             }
         }
     }

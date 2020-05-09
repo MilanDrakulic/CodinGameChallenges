@@ -12,7 +12,7 @@ namespace Pacman
 
         public Level(int width, int height)
         {
-            map = new int[width, height];
+            map = new int[height, width];
         }
 
         public void StringsToMatrix(string[] levelRows)
