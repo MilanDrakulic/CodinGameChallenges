@@ -10,6 +10,7 @@ namespace Pacman
 	{
 		public int x;
 		public int y;
+		public bool hasVisiblePellets = true;
 
 		public Point()
 		{
@@ -23,11 +24,21 @@ namespace Pacman
 			this.y = y;
 		}
 
+		public Point(Point point)
+		{
+			this.x = point.x;
+			this.y = point.y;
+		}
+
 		public double GetDistanceTo(Point target)
 		{
 			int a = target.x - x;
 			int b = target.y - y;
+			//Euclidian
 			return Math.Sqrt(a*a + y*y);
+
+			////Manhattan
+			//return Math.Abs(a) + Math.Abs(b);
 		}
 
 		public bool IsValid()

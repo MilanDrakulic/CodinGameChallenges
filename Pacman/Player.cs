@@ -20,13 +20,14 @@ namespace Pacman
                 string row = Console.ReadLine(); // one line of the grid: space " " is floor, pound "#" is wall
                 levelRows[i] = row;
             }
-            Level level = new Level(width, height);
-            level.StringsToMatrix(levelRows);
+            Level.InitializeLevel(width, height);
+            Level.StringsToMatrix(levelRows);
 
             // game loop
             while (true)
             {
                 Common.CurrentTurn++;
+                Common.selectedTargets.Clear();
 
                 inputs = Console.ReadLine().Split(' ');
                 int myScore = int.Parse(inputs[0]);
@@ -51,6 +52,11 @@ namespace Pacman
                 PelletController.ClearPellets();
 
                 int visiblePelletCount = int.Parse(Console.ReadLine()); // all pellets in sight
+                if (visiblePelletCount == 0)
+                {
+                    Logic.MarkEmptyTiles();
+                }
+                
                 for (int i = 0; i < visiblePelletCount; i++)
                 {
                     inputs = Console.ReadLine().Split(' ');
@@ -72,7 +78,7 @@ namespace Pacman
                 // To debug: Console.Error.WriteLine("Debug messages...");
 
                 string output = "";
-                foreach (Pac pac in PacController.pacs)
+                foreach (Pac pac in PacController.myPacs)
                 {
                     Logic.SetTarget(pac);
                     Point target = Logic.CurrentTargets[pac.Id];

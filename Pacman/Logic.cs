@@ -6,6 +6,120 @@ using System.Threading.Tasks;
 
 namespace Pacman
 {
+	public interface IPacStrategy
+	{
+		Point GetTarget(Pac pac, Point currentTarget);
+	}
+
+	public static class StrategyPicker
+	{
+		public static IPacStrategy ChooseStrategy(Pac pac)
+		{
+			IPacStrategy result = null;
+
+			//TODO - add aditional strategy choices
+			if (PelletController.BigPellets.Count > 0)
+			{
+				result = new GreedyStrategy();
+			}
+			else
+			{
+				if (PelletController.Pellets.Count > 0)
+				{
+					result = new VisibleStrategy();
+				}
+			}
+
+			if (result == null)
+			{
+				result = new WaitStrategy();
+			}
+
+			return result;
+		}
+	}
+
+	public class GreedyStrategy : IPacStrategy
+	{
+		public Point GetTarget(Pac pac, Point currentTarget)
+		{
+			if (currentTarget.IsValid() && PelletController.ExistsAtPosition(currentTarget) && !Common.selectedTargets.Contains(currentTarget))
+			{
+				return currentTarget;
+			}
+
+			Point target = null;
+			double minDistance = Double.MaxValue;
+			double distance;
+
+			if (PelletController.BigPellets.Count > 0)
+			{
+
+				foreach (Point bigPellet in PelletController.BigPellets)
+				{
+					if (Common.selectedTargets.Contains(bigPellet))
+					{
+						continue;
+					}
+					distance = bigPellet.GetDistanceTo(pac.Origin);
+					if (distance < minDistance)
+					{
+						minDistance = distance;
+						target = new Point(bigPellet);
+					}
+				}
+			}
+
+			Console.Error.WriteLine("PacId:" + pac.Id + " Strategy: Greedy");
+			return target;
+		}
+	}
+
+	public class VisibleStrategy : IPacStrategy
+	{
+		public Point GetTarget(Pac pac, Point currentTarget)
+		{
+			if (currentTarget.IsValid() && PelletController.ExistsAtPosition(currentTarget) && !Common.selectedTargets.Contains(currentTarget))
+			{
+				Console.Error.WriteLine("Keeping current target:" + currentTarget.ToString());
+				return currentTarget;
+			}
+
+			Point target = null;
+			double minDistance = Double.MaxValue;
+			double distance;
+
+			if (PelletController.Pellets.Count > 0)
+			{
+				foreach (Point pellet in PelletController.Pellets)
+				{
+					if (Common.selectedTargets.Contains(pellet))
+					{
+						Console.Error.WriteLine("Pellet to skip:" + pellet.ToString());
+						continue;
+					}
+					distance = pellet.GetDistanceTo(pac.Origin);
+					if (distance < minDistance)
+					{
+						minDistance = distance;
+						target = pellet;
+					}
+				}
+			}
+
+			Console.Error.WriteLine("PacId:" + pac.Id + " Strategy: Visible " + ((target == null)? "null": target.ToString()));
+			return target;
+		}
+	}
+
+	public class WaitStrategy : IPacStrategy
+	{
+		public Point GetTarget(Pac pac, Point currentTarget)
+		{
+			Console.Error.WriteLine("PacId:" + pac.Id + " Strategy: Wait");
+			return pac.Origin;
+		}
+	}
 
 	public static class Logic
 	{
@@ -23,54 +137,34 @@ namespace Pacman
 		public static void SetTarget(Pac pac)
 		{
 			AddCurrentTargetIfNeeded(pac);
-			if (CurrentTargets[pac.Id].IsValid() && PelletController.ExistsAtPosition(CurrentTargets[pac.Id]))
-			{
-				return;
-			}
+			Point target = StrategyPicker.ChooseStrategy(pac).GetTarget(pac, CurrentTargets[pac.Id]);
 
-			Console.Error.WriteLine("Searching for new target!");
-			Point target = new Point();
-			double minDistance = Double.MaxValue;
-			double distance;
-
-			if (PelletController.BigPellets.Count > 0)
+			if (target == null)
 			{
-
-				foreach (Point bigPellet in PelletController.BigPellets)
-				{
-					distance = bigPellet.GetDistanceTo(pac.Origin);
-					if (distance < minDistance)
-					{
-						minDistance = distance;
-						target = bigPellet;
-					}
-				}
-			}
-			else
-			{
-				//temp logic, to be switched to density
-				if (PelletController.Pellets.Count > 0)
-				{
-					foreach (Point pellet in PelletController.Pellets)
-					{
-						distance = pellet.GetDistanceTo(pac.Origin);
-						if (distance < minDistance)
-						{
-							minDistance = distance;
-							target = pellet;
-						}
-					}
-				}
+				target = new Point(pac.Origin.x, pac.Origin.y);
+				Console.Error.WriteLine("Waiting!");
 			}
 
 			if (target.IsValid())
 			{
+				foreach (Point selectedTarget in Common.selectedTargets)
+				{
+					Console.Error.WriteLine("Already selected: " + selectedTarget.ToString());
+				}
+				Common.selectedTargets.Add(target);
 				CurrentTargets[pac.Id] = target;
 				Console.Error.WriteLine("New target: " + CurrentTargets[pac.Id].ToString());
 			}
 
 			return;
-			//return target.IsValid()? target: origin;
+		}
+
+		public static void MarkEmptyTiles()
+		{
+			foreach (Pac pac in PacController.myPacs)
+			{
+				Level.junctions.Remove(pac.Origin);
+			}
 		}
 	}
 }

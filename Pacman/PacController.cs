@@ -64,12 +64,12 @@ namespace Pacman
 
 	public static class PacController
 	{
-		public static List<Pac> pacs = new List<Pac>();
+		public static List<Pac> myPacs = new List<Pac>();
 		public static List<Pac> enemyPacs = new List<Pac>();
 
 		public static void AddPac(Pac pac)
 		{
-			pacs.Add(pac);
+			myPacs.Add(pac);
 		}
 
 		public static void AddPac(int id, int x, int y, string pacType, bool mine)
@@ -78,7 +78,7 @@ namespace Pacman
 			Pac pac = new Pac(id, origin, pacType);
 			if (mine)
 			{
-				pacs.Add(pac);
+				myPacs.Add(pac);
 			}
 			else
 			{
@@ -90,14 +90,14 @@ namespace Pacman
 
 		public static Pac GetPac(int id)
 		{
-			return pacs.Where(x => x.Id == id).FirstOrDefault();
+			return myPacs.Where(x => x.Id == id).FirstOrDefault();
 		}
 
 		public static void ClearPacs()
 		{
-			if (pacs != null && pacs.Count > 0)
+			if (myPacs != null && myPacs.Count > 0)
 			{
-				pacs.Clear();
+				myPacs.Clear();
 			}
 		}
 	}

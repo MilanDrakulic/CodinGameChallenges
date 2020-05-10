@@ -12,5 +12,6 @@ namespace Pacman
 		public static readonly int SwitchCooldownDuration = 10;
 
 		public static int CurrentTurn = 0;
+		public static List<Point> selectedTargets = new List<Point>();
 	}
 }

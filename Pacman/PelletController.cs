@@ -48,7 +48,8 @@ namespace Pacman
 
 		public static bool ExistsAtPosition(Point position)
 		{
-			return BigPellets.Where(a => a.x == position.x && a.y == position.y).Any() || Pellets.Where(a => a.x == position.x && a.y == position.y).Any();
+			return BigPellets.Contains(position);
+			//return BigPellets.Where(a => a.x == position.x && a.y == position.y).Any() || Pellets.Where(a => a.x == position.x && a.y == position.y).Any();
 		}
 
 		//For later use - calculation of quadrant densities relative to origin 
