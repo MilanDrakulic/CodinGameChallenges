@@ -22,12 +22,15 @@ namespace Pacman
             }
             Level.InitializeLevel(width, height);
             Level.StringsToMatrix(levelRows);
+            Level.CalculateJunctions();
+            Level.PrintJunctions();
 
             // game loop
             while (true)
             {
                 Common.CurrentTurn++;
-                Common.selectedTargets.Clear();
+                PacController.ClearCurrentTargets();
+                //Common.currentTargets.Clear();
 
                 inputs = Console.ReadLine().Split(' ');
                 int myScore = int.Parse(inputs[0]);
@@ -46,12 +49,13 @@ namespace Pacman
                     int speedTurnsLeft = int.Parse(inputs[5]); // unused in wood leagues
                     int abilityCooldown = int.Parse(inputs[6]); // unused in wood leagues
 
-                    PacController.AddPac(pacId, x, y, typeId, mine);
+                    PacController.AddPac(pacId, x, y, typeId, mine, abilityCooldown);
                 }
 
                 PelletController.ClearPellets();
 
                 int visiblePelletCount = int.Parse(Console.ReadLine()); // all pellets in sight
+                Console.Error.WriteLine("Visible pellets: " + visiblePelletCount.ToString());
                 if (visiblePelletCount == 0)
                 {
                     Logic.MarkEmptyTiles();
@@ -81,10 +85,16 @@ namespace Pacman
                 foreach (Pac pac in PacController.myPacs)
                 {
                     Logic.SetTarget(pac);
-                    Point target = Logic.CurrentTargets[pac.Id];
+                    Point target = Logic.CurrentTargets[pac.Id].point;
 
                     output += (output == "") ? "" : "|";
                     output += "MOVE " + pac.Id.ToString() + " " + target.ToString();
+
+                    // if (!Logic.CurrentTargets[pac.Id].onHold && pac.Cooldown == 0)
+                    // {
+                    //     output += " | SPEED " + pac.Id.ToString();
+                    //     //Console.WriteLine("SPEED " + pac.Id.ToString());
+                    // }
                 }
                 Console.WriteLine(output);
 

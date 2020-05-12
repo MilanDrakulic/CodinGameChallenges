@@ -11,7 +11,7 @@ namespace Pacman
     {
         public static int[,] map;
         //public List<Point> crossroads;
-        public static Dictionary<Point, int> junctions;
+        public static Dictionary<Point, int> junctions = new Dictionary<Point, int>();
 
         public static void InitializeLevel(int width, int height)
         {
@@ -30,6 +30,7 @@ namespace Pacman
                     map[i, j] = levelRows[i][j] == ' '? 1: 0;
                 }
             }
+            PrintMatrix(levelRows);
         }
 
         public static void CalculateJunctions()
@@ -40,7 +41,7 @@ namespace Pacman
                 {
                     if (map[i, j] > 0)
                     {
-                        List<Point> neighbours = GetNeighbours(i, j);
+                        List<Point> neighbours = GetNeighbours(j, i);
                         if (neighbours.Count >= 2)
                         {
                             if (neighbours.Count == 2)
@@ -48,18 +49,19 @@ namespace Pacman
                                 //besides true crossroads, we're also adding elbows
                                 if ((neighbours[0].x != neighbours[1].x) && (neighbours[0].y != neighbours[1].y))
                                 {
-                                    junctions.Add(new Point(i, j), neighbours.Count);
+                                    junctions.Add(new Point(j, i), neighbours.Count);
                                 }
                             }
                             else
                             {
-                                junctions.Add(new Point(i, j), neighbours.Count);
+                                junctions.Add(new Point(j, i), neighbours.Count);
                             }
                         }
                     }
                 }
             }
-            junctions = (Dictionary<Point, int>) from entry in junctions orderby entry.Value ascending select entry;
+            junctions = (from entry in junctions orderby entry.Value descending select entry).ToDictionary(x => x.Key, x => x.Value);
+            //junctions = (Dictionary<Point, int>) from entry in junctions orderby entry.Value ascending select entry;
         }
 
         public static List<Point> GetNeighbours(int x, int y)
@@ -69,7 +71,7 @@ namespace Pacman
             if (x == 0)
             {
                 //Should be always true per prerequisites
-                if (map[map.GetLength(1) - 1, y] > 0)
+                if (map[y, map.GetLength(1) - 1] > 0)
                 {
                     result.Add(new Point(map.GetLength(1) - 1, y));
                 }
@@ -85,7 +87,7 @@ namespace Pacman
             if (x == map.GetLength(1) - 1)
             {
                 //Should be always true per prerequisites
-                if (map[0, y] > 0)
+                if (map[y, 0] > 0)
                 {
                     result.Add(new Point(0, y));
                 }
@@ -120,33 +122,43 @@ namespace Pacman
                 return false;
             }
 
-            if (map[x, y] > 0)
+            //x, y are switched in a matrix
+            if (map[y, x] > 0)
+
             {
                 result = true;
             }
             return result;
         }
 
-        public static Point GetNearestJunction(Point origin)
+        public static List<Point> TilesVisibleFrom(Point origin)
         {
-            Point result = null;
-            double minDistance = Double.MaxValue;
-            double distance;
+            List<Point> result = new List<Point>();
 
-            foreach (KeyValuePair<Point, int> junction in junctions)
-            {
-                if (junction.Key.hasVisiblePellets)
-                {
-                    distance = origin.GetDistanceTo(junction.Key);
-                    if (distance < minDistance)
-                    {
-                        minDistance = distance;
-                        result = junction.Key;
-                    }
-                }
-            }
+
+
+
 
             return result;
+        }
+
+        public static void PrintMatrix(string[] levelRows)
+        {
+            for (int i = 0; i < levelRows.Length; i++)
+            {
+                for (int j = 0; j < levelRows[i].Length; j++)
+                {
+                    Console.Error.WriteLine(levelRows[i][j]);
+                }
+            }
+        }
+
+        public static void PrintJunctions()
+        {
+            foreach (KeyValuePair<Point, int> junction in junctions)
+            {
+                Console.Error.WriteLine(junction.Key.ToString() + " #" + junction.Value.ToString());
+            }
         }
     }
 }

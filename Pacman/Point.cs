@@ -30,6 +30,24 @@ namespace Pacman
 			this.y = point.y;
 		}
 
+		public override bool Equals(object obj)
+		{
+			Point point = obj as Point;
+			return point.x == this.x && point.y == this.y;
+		}
+
+		public override int GetHashCode()
+		{
+			unchecked // Overflow is fine, just wrap
+			{
+				int hash = 17;
+				// Suitable nullity checks etc, of course :)
+				hash = hash * 23 + x.GetHashCode();
+				hash = hash * 23 + y.GetHashCode();
+				return hash;
+			}
+		}
+
 		public double GetDistanceTo(Point target)
 		{
 			int a = target.x - x;

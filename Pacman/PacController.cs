@@ -21,6 +21,8 @@ namespace Pacman
 		public int Cooldown = 0;
 		public int SpeedActivatedTurn = -Common.SpeedCooldownDuration;
 		public int SwitchActivatedTurn = -Common.SwitchCooldownDuration;
+		public Point currentTarget;
+		public Point previousTarget;
 
 		public Pac(int id, Point origin, string pacType)
 		{
@@ -60,6 +62,11 @@ namespace Pacman
 			}
 			return result;
 		}
+
+		public Point GetCurrentTarget()
+		{
+			return Common.currentTargets[this.Id];
+		}
 	}
 
 	public static class PacController
@@ -72,10 +79,11 @@ namespace Pacman
 			myPacs.Add(pac);
 		}
 
-		public static void AddPac(int id, int x, int y, string pacType, bool mine)
+		public static void AddPac(int id, int x, int y, string pacType, bool mine, int abilityCooldown)
 		{
 			Point origin = new Point(x, y);
 			Pac pac = new Pac(id, origin, pacType);
+			pac.Cooldown = abilityCooldown;
 			if (mine)
 			{
 				myPacs.Add(pac);
@@ -95,10 +103,36 @@ namespace Pacman
 
 		public static void ClearPacs()
 		{
+			//TODO - switch to this
+			//Common.remainingPacs.Clear();
+
 			if (myPacs != null && myPacs.Count > 0)
 			{
 				myPacs.Clear();
 			}
+		}
+
+		public static void ClearCurrentTargets()
+		{
+			foreach (Pac pac in myPacs)
+			{
+				pac.currentTarget = null;
+			}
+			Common.currentTargets.Clear();
+		}
+
+		public static Dictionary<int, Point> GetCurrentTargets()
+		{
+			Dictionary<int, Point> result = null;
+			foreach (Pac pac in myPacs)
+			{
+				if (pac.currentTarget != null)
+				{
+					result.Add(pac.Id, pac.currentTarget);
+				}
+			}
+
+			return result;
 		}
 	}
 }
