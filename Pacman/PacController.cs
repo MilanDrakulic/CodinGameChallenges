@@ -134,5 +134,16 @@ namespace Pacman
 
 			return result;
 		}
+
+		public static Pac GetPacWithCurrentTarget(Point target)
+		{
+			Pac pac = null;
+
+			if (GetCurrentTargets().Values.Contains(target))
+			{
+				pac = GetPac(GetCurrentTargets().Where(x => x.Value == target).FirstOrDefault().Key);
+			}
+			return pac;
+		}
 	}
 }

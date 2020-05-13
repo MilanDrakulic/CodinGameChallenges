@@ -80,22 +80,36 @@ namespace Pacman
 
                 // Write an action using Console.WriteLine()
                 // To debug: Console.Error.WriteLine("Debug messages...");
+                for (int i = 0; i < PacController.myPacs.Count; i++)
+                {
+                    Pac pac = PacController.myPacs[i];
+                    Logic.SetTarget(ref pac);
+                }
 
                 string output = "";
-                foreach (Pac pac in PacController.myPacs)
+                for (int i = 0; i < PacController.myPacs.Count; i++)
                 {
-                    Logic.SetTarget(pac);
+                    Pac pac = PacController.myPacs[i];
                     Point target = pac.currentTarget;
 
                     output += (output == "") ? "" : "|";
                     output += "MOVE " + pac.id.ToString() + " " + target.ToString();
-
-                    // if (!Logic.CurrentTargets[pac.Id].onHold && pac.Cooldown == 0)
-                    // {
-                    //     output += " | SPEED " + pac.Id.ToString();
-                    //     //Console.WriteLine("SPEED " + pac.Id.ToString());
-                    // }
                 }
+
+                //foreach (Pac pac in PacController.myPacs)
+                //{
+                //    Logic.SetTarget(ref pac);
+                //    Point target = pac.currentTarget;
+
+                //    output += (output == "") ? "" : "|";
+                //    output += "MOVE " + pac.id.ToString() + " " + target.ToString();
+
+                //    // if (!Logic.CurrentTargets[pac.Id].onHold && pac.Cooldown == 0)
+                //    // {
+                //    //     output += " | SPEED " + pac.Id.ToString();
+                //    //     //Console.WriteLine("SPEED " + pac.Id.ToString());
+                //    // }
+                //}
                 Console.WriteLine(output);
 
             }

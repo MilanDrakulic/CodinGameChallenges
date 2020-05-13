@@ -8,80 +8,80 @@ namespace Pacman
 {
 	public interface IPacStrategy
 	{
-		Point GetTarget(Pac pac);
+		Point GetTarget(ref Pac pac);
 	}
 
 	public static class StrategyPicker
 	{
-		public static Point GetTargetFromStrategy(Pac pac)
+		public static Point GetTargetFromStrategy(ref Pac pac)
 		{
 			Point result = null;
 
 			if (PelletController.BigPellets.Count > 0)
 			{
-				result = new GreedyStrategy().GetTarget(pac);
+				result = new GreedyStrategy().GetTarget(ref pac);
 			}
 
 			if ((result == null) && (PelletController.Pellets.Count > 0))
 			{
-				result = new VisibleStrategy().GetTarget(pac);
+				result = new VisibleStrategy().GetTarget(ref pac);
 			}
 
 			if ((result == null) && (Level.junctions.Count > 0))
 			{
-				result = new JunctionsStrategy().GetTarget(pac);
+				result = new JunctionsStrategy().GetTarget(ref pac);
 			}
 
-			if (pac.isOnHold)
-			{
-				result = new JunctionsStrategy().GetTarget(pac);
-			}
+			//if (pac.isOnHold)
+			//{
+			//	result = new JunctionsStrategy().GetTarget(ref pac);
+			//}
 
 			if (result == null)
 			{
-				result = new WaitStrategy().GetTarget(pac);
+				result = new WaitStrategy().GetTarget(ref pac);
 			}
 
 			return result;
 		}
 
-		public static IPacStrategy ChooseStrategy(Pac pac)
-		{
-			IPacStrategy result = null;
+		//public static IPacStrategy ChooseStrategy(Pac pac)
+		//{
+		//	IPacStrategy result = null;
 
-			//TODO - add aditional strategy choices
-			if (PelletController.BigPellets.Count > 0)
-			{
-				result = new GreedyStrategy();
-			}
+		//	//TODO - add aditional strategy choices
+		//	if (PelletController.BigPellets.Count > 0)
+		//	{
+		//		result = new GreedyStrategy();
+		//	}
 
-			if ((result == null) && (PelletController.Pellets.Count > 0))
-			{
-				result = new VisibleStrategy();
-			}
+		//	if ((result == null) && (PelletController.Pellets.Count > 0))
+		//	{
+		//		result = new VisibleStrategy();
+		//	}
 
-			if ((result == null) && (Level.junctions.Count > 0))
-			{
-				result = new JunctionsStrategy();
-			}
+		//	if ((result == null) && (Level.junctions.Count > 0))
+		//	{
+		//		result = new JunctionsStrategy();
+		//	}
 
-			if (pac.isOnHold)
-			{ 
-				result = new JunctionsStrategy();
-			}
+		//	if (pac.isOnHold)
+		//	{ 
+		//		result = new JunctionsStrategy();
+		//	}
 
-			if (result == null)
-			{
-				result = new WaitStrategy();
-			}
+		//	if (result == null)
+		//	{
+		//		result = new WaitStrategy();
+		//	}
 
-			return result;
-		}
+		//	return result;
+		//}
 	}
 
 	public class GreedyStrategy : IPacStrategy
 	{
-		public Point GetTarget(Pac pac)
+		public Point GetTarget(ref Pac pac)
 		{
 			if (pac.currentTarget != null && PelletController.ExistsAtPosition(pac.currentTarget) && !PacController.GetCurrentTargets().Values.Contains(pac.currentTarget))
 			{
@@ -99,7 +99,15 @@ namespace Pacman
 				{
 					if (PacController.GetCurrentTargets().Values.Contains(bigPellet))
 					{
-						Console.Error.WriteLine("Pellet to skip:" + bigPellet.ToString());
+						Pac previousTargetOwner = PacController.GetPacWithCurrentTarget(bigPellet);
+						if ((pac.origin.GetDistanceTo(bigPellet) < previousTargetOwner.origin.GetDistanceTo(bigPellet)))
+						{
+							Common.SwapPacTargets(ref previousTargetOwner, ref pac, bigPellet);
+						}
+						else
+						{
+							Console.Error.WriteLine("Pellet to skip:" + bigPellet.ToString());
+						}
 						continue;
 					}
 					distance = bigPellet.GetDistanceTo(pac.origin);
@@ -118,7 +126,7 @@ namespace Pacman
 
 	public class VisibleStrategy : IPacStrategy
 	{
-		public Point GetTarget(Pac pac)
+		public Point GetTarget(ref Pac pac)
 		{
 			if (pac.currentTarget != null && PelletController.ExistsAtPosition(pac.currentTarget) && !PacController.GetCurrentTargets().Values.Contains(pac.currentTarget))
 			{
@@ -136,7 +144,15 @@ namespace Pacman
 				{
 					if (PacController.GetCurrentTargets().Values.Contains(pellet))
 					{
-						Console.Error.WriteLine("Pellet to skip:" + pellet.ToString());
+						Pac previousTargetOwner = PacController.GetPacWithCurrentTarget(pellet);
+						if ((pac.origin.GetDistanceTo(pellet) < previousTargetOwner.origin.GetDistanceTo(pellet)))
+						{
+							Common.SwapPacTargets(ref previousTargetOwner, ref pac, pellet);
+						}
+						else
+						{
+							Console.Error.WriteLine("Pellet to skip:" + pellet.ToString());
+						}
 						continue;
 					}
 					distance = pellet.GetDistanceTo(pac.origin);
@@ -155,16 +171,9 @@ namespace Pacman
 
 	public class JunctionsStrategy : IPacStrategy
 	{
-		public Point GetTarget(Pac pac)
+		public Point GetTarget(ref Pac pac)
 		{
-			Console.Error.WriteLine("PacId:" + pac.id + " Strategy: Junctions");
-
-			return GetNearestJunction(pac.origin);
-		}
-
-		public Point GetNearestJunction(Point origin)
-		{
-			Point result = null;
+			Point target = null;
 			double minDistance = Double.MaxValue;
 			double distance;
 
@@ -172,28 +181,37 @@ namespace Pacman
 			{
 				if (PacController.GetCurrentTargets().Values.Contains(junction.Key))
 				{
-					Console.Error.WriteLine("Pellet to skip:" + junction.Key.ToString());
+					Pac previousTargetOwner = PacController.GetPacWithCurrentTarget(junction.Key);
+					if ((pac.origin.GetDistanceTo(junction.Key) < previousTargetOwner.origin.GetDistanceTo(junction.Key)))
+					{
+						Common.SwapPacTargets(ref previousTargetOwner, ref pac, junction.Key);
+					}
+					else
+					{
+						Console.Error.WriteLine("Junction to skip:" + junction.Key.ToString());
+					}
 					continue;
 				}
 
 				if (junction.Key.hasVisiblePellets)
 				{
-					distance = origin.GetDistanceTo(junction.Key);
-					if (distance < minDistance)
+					distance = pac.origin.GetDistanceTo(junction.Key);
+					if ((distance < minDistance) && (distance > 0))
 					{
 						minDistance = distance;
-						result = junction.Key;
+						target = junction.Key;
 					}
 				}
 			}
 
-			return result;
+			Console.Error.WriteLine("PacId:" + pac.id + " Strategy: Junctions " + ((target == null) ? "null" : target.ToString()));
+			return target;
 		}
 	}
 
 	public class WaitStrategy : IPacStrategy
 	{
-		public Point GetTarget(Pac pac)
+		public Point GetTarget(ref Pac pac)
 		{
 			Console.Error.WriteLine("PacId:" + pac.id + " Strategy: Wait");
 			return pac.origin;
@@ -203,9 +221,10 @@ namespace Pacman
 	public static class Logic
 	{
 
-		public static void SetTarget(Pac pac)
+		public static void SetTarget(ref Pac pac)
 		{
-			pac.currentTarget = StrategyPicker.GetTargetFromStrategy(pac);
+			Point target = StrategyPicker.GetTargetFromStrategy(ref pac);
+			pac.currentTarget = target;
 			//pac.currentTarget = StrategyPicker.ChooseStrategy(pac).GetTarget(pac);
 
 			if (pac.currentTarget == null)
@@ -231,12 +250,6 @@ namespace Pacman
 					Console.Error.WriteLine("Deleted junction: " + pac.origin.ToString());
 				}
 			}
-		}
-
-		//Used when we realize that there is a pac closer to already selected target that the pac it was selected for, and we want to switch these pacs - assing this already selected target to current/closer pac and keep searching for farther pac
-		public static void SwapPacTargets(Pac closer, Pac farther, Point target)
-		{ 
-			
 		}
 	}
 }
