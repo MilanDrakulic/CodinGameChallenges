@@ -12,7 +12,6 @@ namespace Pacman
 		public static readonly int SwitchCooldownDuration = 10;
 
 		public static int CurrentTurn = 0;
-		public static Dictionary<int, Point> currentTargets = new Dictionary<int, Point>();
 		public static List<int> remainingPacs;
 	}
 }

@@ -15,42 +15,43 @@ namespace Pacman
 
 	public class Pac
 	{
-		public int Id;
-		public Point Origin;
-		public PacType PacType;
-		public int Cooldown = 0;
-		public int SpeedActivatedTurn = -Common.SpeedCooldownDuration;
-		public int SwitchActivatedTurn = -Common.SwitchCooldownDuration;
+		public int id;
+		public Point origin;
+		public PacType pacType;
+		public int cooldown = 0;
+		public int speedActivatedTurn = -Common.SpeedCooldownDuration;
+		public int switchActivatedTurn = -Common.SwitchCooldownDuration;
 		public Point currentTarget;
 		public Point previousTarget;
+		public bool isOnHold;
 
 		public Pac(int id, Point origin, string pacType)
 		{
-			Id = id;
-			Origin = origin;
-			PacType = MapType(pacType);
+			this.id = id;
+			this.origin = origin;
+			this.pacType = MapType(pacType);
 		}
 
 		public bool CanActivateAbility()
 		{
-			return Cooldown == 0;
+			return cooldown == 0;
 		}
 
 		public void ActivateSpeed()
 		{
-			Console.WriteLine("SPEED " + this.Id.ToString());
+			Console.WriteLine("SPEED " + this.id.ToString());
 
-			Console.Error.WriteLine("Pac: " + this.Id.ToString() + " activated SPEED");
-			SpeedActivatedTurn = Common.CurrentTurn;
+			Console.Error.WriteLine("Pac: " + this.id.ToString() + " activated SPEED");
+			speedActivatedTurn = Common.CurrentTurn;
 		}
 
 		public void ActivateSwitch(string switchTo)
 		{
-			this.PacType = MapType(switchTo);
-			Console.WriteLine("SWITCH " + this.Id.ToString() + " " + this.PacType.ToString());
+			this.pacType = MapType(switchTo);
+			Console.WriteLine("SWITCH " + this.id.ToString() + " " + this.pacType.ToString());
 
-			Console.Error.WriteLine("Pac: " + this.Id.ToString() + " switched to " + switchTo);
-			SwitchActivatedTurn = Common.CurrentTurn;
+			Console.Error.WriteLine("Pac: " + this.id.ToString() + " switched to " + switchTo);
+			switchActivatedTurn = Common.CurrentTurn;
 		}
 
 		public PacType MapType(string typeString)
@@ -65,7 +66,7 @@ namespace Pacman
 
 		public Point GetCurrentTarget()
 		{
-			return Common.currentTargets[this.Id];
+			return currentTarget;
 		}
 	}
 
@@ -83,7 +84,7 @@ namespace Pacman
 		{
 			Point origin = new Point(x, y);
 			Pac pac = new Pac(id, origin, pacType);
-			pac.Cooldown = abilityCooldown;
+			pac.cooldown = abilityCooldown;
 			if (mine)
 			{
 				myPacs.Add(pac);
@@ -92,13 +93,13 @@ namespace Pacman
 			{
 				enemyPacs.Add(pac);
 			}
-			Console.Error.WriteLine("Added Pac! Id: " + pac.Id.ToString());
+			Console.Error.WriteLine("Added Pac! Id: " + pac.id.ToString());
 		}
 
 
 		public static Pac GetPac(int id)
 		{
-			return myPacs.Where(x => x.Id == id).FirstOrDefault();
+			return myPacs.Where(x => x.id == id).FirstOrDefault();
 		}
 
 		public static void ClearPacs()
@@ -118,17 +119,16 @@ namespace Pacman
 			{
 				pac.currentTarget = null;
 			}
-			Common.currentTargets.Clear();
 		}
 
 		public static Dictionary<int, Point> GetCurrentTargets()
 		{
-			Dictionary<int, Point> result = null;
+			Dictionary<int, Point> result = new Dictionary<int, Point>();
 			foreach (Pac pac in myPacs)
 			{
 				if (pac.currentTarget != null)
 				{
-					result.Add(pac.Id, pac.currentTarget);
+					result.Add(pac.id, pac.currentTarget);
 				}
 			}
 

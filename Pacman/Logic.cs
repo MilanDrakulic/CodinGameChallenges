@@ -8,12 +8,44 @@ namespace Pacman
 {
 	public interface IPacStrategy
 	{
-		Point GetTarget(Pac pac, CurrentTarget currentTarget);
+		Point GetTarget(Pac pac);
 	}
 
 	public static class StrategyPicker
 	{
-		public static IPacStrategy ChooseStrategy(Pac pac, CurrentTarget currentTarget)
+		public static Point GetTargetFromStrategy(Pac pac)
+		{
+			Point result = null;
+
+			if (PelletController.BigPellets.Count > 0)
+			{
+				result = new GreedyStrategy().GetTarget(pac);
+			}
+
+			if ((result == null) && (PelletController.Pellets.Count > 0))
+			{
+				result = new VisibleStrategy().GetTarget(pac);
+			}
+
+			if ((result == null) && (Level.junctions.Count > 0))
+			{
+				result = new JunctionsStrategy().GetTarget(pac);
+			}
+
+			if (pac.isOnHold)
+			{
+				result = new JunctionsStrategy().GetTarget(pac);
+			}
+
+			if (result == null)
+			{
+				result = new WaitStrategy().GetTarget(pac);
+			}
+
+			return result;
+		}
+
+		public static IPacStrategy ChooseStrategy(Pac pac)
 		{
 			IPacStrategy result = null;
 
@@ -33,7 +65,7 @@ namespace Pacman
 				result = new JunctionsStrategy();
 			}
 
-			if (currentTarget.onHold)
+			if (pac.isOnHold)
 			{ 
 				result = new JunctionsStrategy();
 			}
@@ -49,11 +81,11 @@ namespace Pacman
 
 	public class GreedyStrategy : IPacStrategy
 	{
-		public Point GetTarget(Pac pac, CurrentTarget currentTarget)
+		public Point GetTarget(Pac pac)
 		{
-			if (currentTarget.point.IsValid() && PelletController.ExistsAtPosition(currentTarget.point) && !Common.currentTargets.Values.Contains(currentTarget.point))
+			if (pac.currentTarget != null && PelletController.ExistsAtPosition(pac.currentTarget) && !PacController.GetCurrentTargets().Values.Contains(pac.currentTarget))
 			{
-				return currentTarget.point;
+				return pac.currentTarget;
 			}
 
 			Point target = null;
@@ -65,12 +97,12 @@ namespace Pacman
 
 				foreach (Point bigPellet in PelletController.BigPellets)
 				{
-					if (Common.currentTargets.Values.Contains(bigPellet))
+					if (PacController.GetCurrentTargets().Values.Contains(bigPellet))
 					{
 						Console.Error.WriteLine("Pellet to skip:" + bigPellet.ToString());
 						continue;
 					}
-					distance = bigPellet.GetDistanceTo(pac.Origin);
+					distance = bigPellet.GetDistanceTo(pac.origin);
 					if (distance < minDistance)
 					{
 						minDistance = distance;
@@ -79,19 +111,19 @@ namespace Pacman
 				}
 			}
 
-			Console.Error.WriteLine("PacId:" + pac.Id + " Strategy: Greedy" + ((target == null) ? "null" : target.ToString()));
+			Console.Error.WriteLine("PacId:" + pac.id + " Strategy: Greedy" + ((target == null) ? "null" : target.ToString()));
 			return target;
 		}
 	}
 
 	public class VisibleStrategy : IPacStrategy
 	{
-		public Point GetTarget(Pac pac, CurrentTarget currentTarget)
+		public Point GetTarget(Pac pac)
 		{
-			if (currentTarget.point.IsValid() && PelletController.ExistsAtPosition(currentTarget.point) && !Common.currentTargets.Values.Contains(currentTarget.point))
+			if (pac.currentTarget != null && PelletController.ExistsAtPosition(pac.currentTarget) && !PacController.GetCurrentTargets().Values.Contains(pac.currentTarget))
 			{
-				Console.Error.WriteLine("Keeping current target:" + currentTarget.ToString());
-				return currentTarget.point;
+				Console.Error.WriteLine("Keeping current target:" + pac.currentTarget.ToString());
+				return pac.currentTarget;
 			}
 
 			Point target = null;
@@ -102,12 +134,12 @@ namespace Pacman
 			{
 				foreach (Point pellet in PelletController.Pellets)
 				{
-					if (Common.currentTargets.Values.Contains(pellet))
+					if (PacController.GetCurrentTargets().Values.Contains(pellet))
 					{
 						Console.Error.WriteLine("Pellet to skip:" + pellet.ToString());
 						continue;
 					}
-					distance = pellet.GetDistanceTo(pac.Origin);
+					distance = pellet.GetDistanceTo(pac.origin);
 					if (distance < minDistance)
 					{
 						minDistance = distance;
@@ -116,18 +148,18 @@ namespace Pacman
 				}
 			}
 
-			Console.Error.WriteLine("PacId:" + pac.Id + " Strategy: Visible " + ((target == null)? "null": target.ToString()));
+			Console.Error.WriteLine("PacId:" + pac.id + " Strategy: Visible " + ((target == null)? "null": target.ToString()));
 			return target;
 		}
 	}
 
 	public class JunctionsStrategy : IPacStrategy
 	{
-		public Point GetTarget(Pac pac, CurrentTarget currentTarget)
+		public Point GetTarget(Pac pac)
 		{
-			Console.Error.WriteLine("PacId:" + pac.Id + " Strategy: Junctions");
+			Console.Error.WriteLine("PacId:" + pac.id + " Strategy: Junctions");
 
-			return GetNearestJunction(pac.Origin);
+			return GetNearestJunction(pac.origin);
 		}
 
 		public Point GetNearestJunction(Point origin)
@@ -138,7 +170,7 @@ namespace Pacman
 
 			foreach (KeyValuePair<Point, int> junction in Level.junctions)
 			{
-				if (Common.currentTargets.Values.Contains(junction.Key))
+				if (PacController.GetCurrentTargets().Values.Contains(junction.Key))
 				{
 					Console.Error.WriteLine("Pellet to skip:" + junction.Key.ToString());
 					continue;
@@ -161,76 +193,28 @@ namespace Pacman
 
 	public class WaitStrategy : IPacStrategy
 	{
-		public Point GetTarget(Pac pac, CurrentTarget currentTarget)
+		public Point GetTarget(Pac pac)
 		{
-			Console.Error.WriteLine("PacId:" + pac.Id + " Strategy: Wait");
-			return pac.Origin;
-		}
-	}
-
-	public class CurrentTarget
-	{
-		public Point point;
-		public bool onHold;
-
-		public CurrentTarget()
-		{
-			this.point = new Point();
-		}
-
-		public CurrentTarget(Point point)
-		{
-			this.point = point;
-		}
-
-		public CurrentTarget(Point point, bool onHold)
-		{
-			this.point = point;
-			this.onHold = onHold;
+			Console.Error.WriteLine("PacId:" + pac.id + " Strategy: Wait");
+			return pac.origin;
 		}
 	}
 
 	public static class Logic
 	{
-		public static Dictionary<int, CurrentTarget> CurrentTargets = new Dictionary<int, CurrentTarget>();
-
-		public static void AddCurrentTargetIfNeeded(Pac pac)
-		{
-			if (!CurrentTargets.ContainsKey(pac.Id))
-			{
-				CurrentTargets.Add(pac.Id, new CurrentTarget());
-				Console.Error.WriteLine("Added Target! Id: " + pac.Id.ToString());
-			}
-		}
 
 		public static void SetTarget(Pac pac)
 		{
-			AddCurrentTargetIfNeeded(pac);
-			Point targetPoint = StrategyPicker.ChooseStrategy(pac, CurrentTargets[pac.Id]).GetTarget(pac, CurrentTargets[pac.Id]);
-			if (targetPoint == null)
-			{
-				targetPoint = new JunctionsStrategy().GetTarget(pac, CurrentTargets[pac.Id]);
-			}
+			pac.currentTarget = StrategyPicker.GetTargetFromStrategy(pac);
+			//pac.currentTarget = StrategyPicker.ChooseStrategy(pac).GetTarget(pac);
 
-			CurrentTarget currentTarget = null;
-
-			if (targetPoint == null)
+			if (pac.currentTarget == null)
 			{
-				targetPoint = new Point(pac.Origin.x, pac.Origin.y);
-				currentTarget = new CurrentTarget(targetPoint, true);
+				pac.currentTarget = new Point(pac.origin);
 				Console.Error.WriteLine("Waiting!");
 			}
-			else
-			{
-				currentTarget = new CurrentTarget(targetPoint, false);
-			}
 
-			pac.currentTarget = currentTarget.point;
-
-			CurrentTargets[pac.Id] = currentTarget;
-			Common.currentTargets.Add(pac.Id, targetPoint);
-			Console.Error.WriteLine("New target: " + CurrentTargets[pac.Id].point.ToString());
-
+			Console.Error.WriteLine("Pac: " + pac.id + " target: " + pac.currentTarget.ToString());
 			return;
 		}
 
@@ -239,12 +223,12 @@ namespace Pacman
 			Console.Error.WriteLine("Deleting junction usao");
 			foreach (Pac pac in PacController.myPacs)
 			{
-				Console.Error.WriteLine("Deleting junction pac: " + pac.Id.ToString() + pac.Origin.ToString());
-				if (Level.junctions.ContainsKey(pac.Origin))
+				Console.Error.WriteLine("Deleting junction pac: " + pac.id.ToString() + pac.origin.ToString());
+				if (Level.junctions.ContainsKey(pac.origin))
 				{
 					Console.Error.WriteLine("Deleting junction beore delete");
-					Level.junctions.Remove(pac.Origin);
-					Console.Error.WriteLine("Deleted junction: " + pac.Origin.ToString());
+					Level.junctions.Remove(pac.origin);
+					Console.Error.WriteLine("Deleted junction: " + pac.origin.ToString());
 				}
 			}
 		}

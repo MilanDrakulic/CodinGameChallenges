@@ -85,10 +85,10 @@ namespace Pacman
                 foreach (Pac pac in PacController.myPacs)
                 {
                     Logic.SetTarget(pac);
-                    Point target = Logic.CurrentTargets[pac.Id].point;
+                    Point target = pac.currentTarget;
 
                     output += (output == "") ? "" : "|";
-                    output += "MOVE " + pac.Id.ToString() + " " + target.ToString();
+                    output += "MOVE " + pac.id.ToString() + " " + target.ToString();
 
                     // if (!Logic.CurrentTargets[pac.Id].onHold && pac.Cooldown == 0)
                     // {
