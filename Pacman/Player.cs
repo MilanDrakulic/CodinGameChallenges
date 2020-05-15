@@ -51,6 +51,7 @@ namespace Pacman
 
                     PacController.AddPac(pacId, x, y, typeId, mine, abilityCooldown);
                 }
+                PacController.SyncPacs();
 
                 PelletController.ClearPellets();
 
@@ -83,13 +84,21 @@ namespace Pacman
                 for (int i = 0; i < PacController.myPacs.Count; i++)
                 {
                     Pac pac = PacController.myPacs[i];
-                    Logic.SetTarget(ref pac);
+                    if (pac.isAlive)
+                    {
+                        Logic.SetTarget(ref pac);
+                    }
                 }
 
                 string output = "";
                 for (int i = 0; i < PacController.myPacs.Count; i++)
                 {
                     Pac pac = PacController.myPacs[i];
+                    if (!pac.isAlive)
+                    {
+                        continue;
+                    }
+
                     Point target = pac.currentTarget;
 
                     output += (output == "") ? "" : "|";

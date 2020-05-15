@@ -24,6 +24,8 @@ namespace Pacman
 		public Point currentTarget;
 		public Point previousTarget;
 		public bool isOnHold;
+		public bool isAlive = true;
+		public string latestStrategy;
 
 		public Pac(int id, Point origin, string pacType)
 		{
@@ -63,17 +65,13 @@ namespace Pacman
 			}
 			return result;
 		}
-
-		public Point GetCurrentTarget()
-		{
-			return currentTarget;
-		}
 	}
 
 	public static class PacController
 	{
 		public static List<Pac> myPacs = new List<Pac>();
 		public static List<Pac> enemyPacs = new List<Pac>();
+		public static List<Pac> myCurrentPacs = new List<Pac>();
 
 		public static void AddPac(Pac pac)
 		{
@@ -87,7 +85,8 @@ namespace Pacman
 			pac.cooldown = abilityCooldown;
 			if (mine)
 			{
-				myPacs.Add(pac);
+				myCurrentPacs.Add(pac);
+				//myPacs.Add(pac);
 			}
 			else
 			{
@@ -104,12 +103,41 @@ namespace Pacman
 
 		public static void ClearPacs()
 		{
-			//TODO - switch to this
-			//Common.remainingPacs.Clear();
-
-			if (myPacs != null && myPacs.Count > 0)
+			if (enemyPacs != null && enemyPacs.Count > 0)
 			{
-				myPacs.Clear();
+				enemyPacs.Clear();
+			}
+
+			if (myCurrentPacs != null && myCurrentPacs.Count > 0)
+			{
+				myCurrentPacs.Clear();
+			}
+		}
+
+		public static void SyncPacs()
+		{
+			if (myPacs.Count() != 0)
+			{
+				foreach (Pac pac in myPacs)
+				{
+					Pac currentPac = myCurrentPacs.Where(x => x.id == pac.id).FirstOrDefault();
+					if (currentPac == null)
+					{
+						pac.isAlive = false;
+					}
+					else
+					{
+						pac.cooldown = currentPac.cooldown;
+					}
+				}
+			}
+			//First turn only - adding pacs
+			else
+			{
+				foreach (Pac pac in myCurrentPacs)
+				{
+					myPacs.Add(pac);
+				}
 			}
 		}
 
@@ -117,6 +145,7 @@ namespace Pacman
 		{
 			foreach (Pac pac in myPacs)
 			{
+				pac.previousTarget = pac.currentTarget;
 				pac.currentTarget = null;
 			}
 		}
@@ -126,7 +155,7 @@ namespace Pacman
 			Dictionary<int, Point> result = new Dictionary<int, Point>();
 			foreach (Pac pac in myPacs)
 			{
-				if (pac.currentTarget != null)
+				if ((pac.isAlive) && (pac.currentTarget != null))
 				{
 					result.Add(pac.id, pac.currentTarget);
 				}
@@ -141,7 +170,16 @@ namespace Pacman
 
 			if (GetCurrentTargets().Values.Contains(target))
 			{
-				pac = GetPac(GetCurrentTargets().Where(x => x.Value == target).FirstOrDefault().Key);
+				foreach (KeyValuePair<int, Point> keyValuePair in GetCurrentTargets())
+				{
+					if (keyValuePair.Value.Equals(target))
+					{
+						Console.Error.WriteLine("Found pac for target: " + target.ToString() + " id: " + keyValuePair.Key.ToString());
+						pac = GetPac(keyValuePair.Key);
+					}
+				}
+
+				//pac = GetPac(GetCurrentTargets().Where(x => x.Value.Equals(target)).FirstOrDefault().Key);
 			}
 			return pac;
 		}

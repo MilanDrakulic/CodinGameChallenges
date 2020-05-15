@@ -12,6 +12,7 @@ namespace Pacman
         public static int[,] map;
         //public List<Point> crossroads;
         public static Dictionary<Point, int> junctions = new Dictionary<Point, int>();
+        public static Dictionary<Point, List<Point>> visibleTiles = new Dictionary<Point, List<Point>>();
 
         public static void InitializeLevel(int width, int height)
         {
@@ -131,13 +132,112 @@ namespace Pacman
             return result;
         }
 
-        public static List<Point> TilesVisibleFrom(Point origin)
+        public static void CalculateVisibleTilesForWholeMap()
+        {
+            for (int i = 0; i < map.GetLength(0); i++)
+            {
+                for (int j = 0; j < map.GetLength(1); j++)
+                {
+                    if (map[i, j] > 0)
+                    {
+                        Point tile = new Point(j, i);
+                        visibleTiles.Add(tile, GetTilesVisibleFrom(tile));
+                    }
+                }
+            }
+        }
+
+        public static List<Point> GetTilesVisibleFrom(Point origin)
         {
             List<Point> result = new List<Point>();
 
+            int j = origin.x;
+            int i = origin.y;
+            bool skip = false;
 
+            //looking left
+            while (map[i, j] > 0)
+            {
+                //it's on the edge 
+                if (j == 0)
+                {
+                    j = map.GetLength(1) - 1;
+                }
+                else
+                {
+                    j--;
+                }
 
+                //Handle a rare case when we have a map with straight line with passages on sides - indicated by reachgin a starting point
+                if (j == origin.x && i == origin.y)
+                {
+                    skip = true;
+                    break;
+                }
 
+                if (map[i, j] > 0)
+                {
+                    result.Add(new Point(j, i));
+                }
+            }
+
+            j = origin.x;
+            i = origin.y;
+            //looking left (skipping in case of a straight vertical passage)
+            if (!skip)
+            {
+                while (map[i, j] > 0)
+                {
+                    //it's on the edge 
+                    if (j == map.GetLength(1) - 1)
+                    {
+                        j = 0;
+                    }
+                    else
+                    {
+                        j++;
+                    }
+
+                    if (map[i, j] > 0)
+                    {
+                        result.Add(new Point(j, i));
+                    }
+                }
+            }
+
+            j = origin.x;
+            i = origin.y;
+            //looking up
+            //No passages on vertical axis, so 0 and GetLength(0) - 1 cannot have walkable tiles
+            while (i > 0)
+            {
+                i--;
+                if (map[i, j] > 0)
+                {
+                    result.Add(new Point(j, i));
+                }
+                else
+                {
+                    break;
+                }
+            }
+
+            j = origin.x;
+            i = origin.y;
+            //looking up
+            //No passages on vertical axis, so 0 and GetLength(0) - 1 cannot have walkable tiles
+            while (i < map.GetLength(0) - 1)
+            {
+                i++;
+                if (map[i, j] > 0)
+                {
+                    result.Add(new Point(j, i));
+                }
+                else
+                {
+                    break;
+                }
+            }
 
             return result;
         }
