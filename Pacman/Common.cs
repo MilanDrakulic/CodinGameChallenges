@@ -17,10 +17,16 @@ namespace Pacman
 		//Used when we realize that there is a pac closer to already selected target that the pac it was selected for, and we want to switch these pacs - assing this already selected target to current/closer pac and keep searching for farther pac
 		public static void SwapPacTargets(ref Pac previousOwner, ref Pac newOwner, Point target)
 		{
+			if (previousOwner.hasFixedTarget)
+			{
+				Console.Error.WriteLine("Cannot swap: Pac: " + previousOwner.id.ToString() + " has fixed target: " + previousOwner.currentTarget.ToString());
+				return;
+			}
 			Console.Error.WriteLine("Swapping targets - Previous: " + previousOwner.id.ToString() + " New" + newOwner.id.ToString() + " Pellet:" + target.ToString());
 			newOwner.currentTarget = target;
 			previousOwner.currentTarget = null;
 			newOwner = previousOwner;
+			return;
 		}
 	}
 }

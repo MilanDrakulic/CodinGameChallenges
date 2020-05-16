@@ -24,7 +24,9 @@ namespace Pacman
 		public Point currentTarget;
 		public Point previousTarget;
 		public bool isOnHold;
+		public bool isInCollision;
 		public bool isAlive = true;
+		public bool hasFixedTarget;
 		public string latestStrategy;
 
 		public Pac(int id, Point origin, string pacType)
@@ -65,6 +67,14 @@ namespace Pacman
 			}
 			return result;
 		}
+
+		public void CheckFixedTarget()
+		{
+			if (hasFixedTarget && origin.Equals(currentTarget))
+			{
+				hasFixedTarget = false;
+			}
+		}
 	}
 
 	public static class PacController
@@ -81,7 +91,9 @@ namespace Pacman
 		public static void AddPac(int id, int x, int y, string pacType, bool mine, int abilityCooldown)
 		{
 			Point origin = new Point(x, y);
+			Console.Error.WriteLine("Adding pac Id: " + id.ToString() + " Pac origin: " + origin.ToString());
 			Pac pac = new Pac(id, origin, pacType);
+		
 			pac.cooldown = abilityCooldown;
 			if (mine)
 			{
@@ -92,7 +104,7 @@ namespace Pacman
 			{
 				enemyPacs.Add(pac);
 			}
-			Console.Error.WriteLine("Added Pac! Id: " + pac.id.ToString());
+			Console.Error.WriteLine("Added Pac! Id: " + pac.id.ToString() + " Pac origin: " + pac.origin.ToString());
 		}
 
 
@@ -124,10 +136,16 @@ namespace Pacman
 					if (currentPac == null)
 					{
 						pac.isAlive = false;
+						Console.Error.WriteLine("Synced dead Pac! Id: " + pac.id.ToString() + " Pac origin: " + pac.origin.ToString());
 					}
 					else
 					{
 						pac.cooldown = currentPac.cooldown;
+						pac.origin.x = currentPac.origin.x;
+						pac.origin.y = currentPac.origin.y;
+						pac.CheckFixedTarget();
+						pac.isInCollision = false;
+						Console.Error.WriteLine("Synced Pac! Id: " + pac.id.ToString() + " Pac origin: " + pac.origin.ToString());
 					}
 				}
 			}
@@ -137,6 +155,7 @@ namespace Pacman
 				foreach (Pac pac in myCurrentPacs)
 				{
 					myPacs.Add(pac);
+					Console.Error.WriteLine("Synced added Pac! Id: " + pac.id.ToString() + " Pac origin: " + pac.origin.ToString());
 				}
 			}
 		}
@@ -183,5 +202,18 @@ namespace Pacman
 			}
 			return pac;
 		}
+
+		public static void DetectCollisions()
+		{
+			foreach (Pac pac in myPacs)
+			{
+				if ((pac.previousTarget == pac.currentTarget) && (!pac.isOnHold))
+				{
+					pac.isInCollision = true;
+				}
+			}
+		}
+
+
 	}
 }

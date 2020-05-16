@@ -196,10 +196,11 @@ namespace Pacman
 				if (junction.Key.hasVisiblePellets)
 				{
 					distance = pac.origin.GetDistanceTo(junction.Key);
-					if ((distance < minDistance) && (distance > 0))
+					if ((distance < minDistance) && (distance > 0.1))
 					{
 						minDistance = distance;
 						target = junction.Key;
+						Console.Error.WriteLine("Junction target:" + junction.Key.ToString() + " distance: " + distance.ToString());
 					}
 				}
 			}
@@ -239,13 +240,14 @@ namespace Pacman
 
 		public static void MarkEmptyTiles()
 		{
-			Console.Error.WriteLine("Deleting junction usao");
 			foreach (Pac pac in PacController.myPacs)
 			{
-				Console.Error.WriteLine("Deleting junction pac: " + pac.id.ToString() + pac.origin.ToString());
+				if (!pac.isAlive)
+				{
+					continue;
+				}
 				if (Level.junctions.ContainsKey(pac.origin))
 				{
-					Console.Error.WriteLine("Deleting junction beore delete");
 					Level.junctions.Remove(pac.origin);
 					Console.Error.WriteLine("Deleted junction: " + pac.origin.ToString());
 				}

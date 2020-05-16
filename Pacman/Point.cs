@@ -53,7 +53,7 @@ namespace Pacman
 			int a = target.x - x;
 			int b = target.y - y;
 			//Euclidian
-			return Math.Sqrt(a*a + y*y);
+			return Math.Sqrt(a*a + b*b);
 
 			////Manhattan
 			//return Math.Abs(a) + Math.Abs(b);
