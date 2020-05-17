@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -46,6 +47,28 @@ namespace Pacman
 				hash = hash * 23 + y.GetHashCode();
 				return hash;
 			}
+		}
+
+		public static bool operator ==(Point a, Point b)
+		{
+			if (object.ReferenceEquals(a, null))
+			{
+				return object.ReferenceEquals(b, null);
+			}
+			else
+			{
+				if (object.ReferenceEquals(b, null))
+				{
+					return false;
+				}
+			}
+
+			return (a.x == b.x) && (a.y == b.y);
+		}
+
+		public static bool operator !=(Point a, Point b)
+		{
+			return !(a == b);
 		}
 
 		public int GetDistanceTo(Point target)

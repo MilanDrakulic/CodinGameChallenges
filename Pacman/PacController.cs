@@ -81,6 +81,16 @@ namespace Pacman
 				hasFixedTarget = false;
 			}
 		}
+
+		public Point ResetTargetIfStationary(Point target)
+		{
+			Point result = null;
+			if (target != origin)
+			{
+				result = target;
+			}
+			return result;
+		}
 	}
 
 	public static class PacController
@@ -97,7 +107,6 @@ namespace Pacman
 		public static void AddPac(int id, int x, int y, string pacType, bool mine, int abilityCooldown)
 		{
 			Point origin = new Point(x, y);
-			Console.Error.WriteLine("Adding pac Id: " + id.ToString() + " Pac origin: " + origin.ToString());
 			Pac pac = new Pac(id, origin, pacType);
 		
 			pac.cooldown = abilityCooldown;
@@ -215,12 +224,20 @@ namespace Pacman
 		{
 			foreach (Pac pac in myPacs)
 			{
+				//First turn special case
+				if (pac.previousOrigin == null)
+				{
+					continue;
+				}
+				
 				if (pac.origin == pac.previousOrigin)
 				//if ((pac.previousTarget == pac.currentTarget) && (!pac.isOnHold))
 				{
+					Console.Error.WriteLine("Collision! Pac id:" + pac.id.ToString());
 					pac.isInCollision = true;
 				}
 			}
+			Console.Error.WriteLine("Finished detecting collisions");
 		}
 
 

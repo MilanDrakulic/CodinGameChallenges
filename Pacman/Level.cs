@@ -165,6 +165,7 @@ namespace Pacman
 
         public static bool CheckNeighbour(int x, int y)
         {
+            //Console.Error.WriteLine("Checking neighbour: x:" + x.ToString() + " y:" + y.ToString() + " map[y, x]:" + map[y, x].ToString());
             bool result = false;
             //Should never happen per prerequisites
             if (y < 0 || y > map.GetLength(0) - 1)
@@ -174,7 +175,6 @@ namespace Pacman
 
             //x, y are switched in a matrix
             if (map[y, x] > 0)
-
             {
                 result = true;
             }

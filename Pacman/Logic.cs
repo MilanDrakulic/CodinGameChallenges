@@ -1,4 +1,5 @@
 ﻿using System;
+using System.CodeDom;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.Sockets;
@@ -21,22 +22,20 @@ namespace Pacman
 			if (PelletController.BigPellets.Count > 0)
 			{
 				result = new GreedyStrategy().GetTarget(ref pac);
+				result = pac.ResetTargetIfStationary(result);
 			}
 
 			if ((result == null) && (PelletController.Pellets.Count > 0))
 			{
 				result = new VisibleStrategy().GetTarget(ref pac);
+				result = pac.ResetTargetIfStationary(result);
 			}
 
 			if ((result == null) && (Level.junctions.Count > 0))
 			{
 				result = new JunctionsStrategy().GetTarget(ref pac);
+				result = pac.ResetTargetIfStationary(result);
 			}
-
-			//if (pac.isOnHold)
-			//{
-			//	result = new JunctionsStrategy().GetTarget(ref pac);
-			//}
 
 			if (result == null)
 			{
@@ -214,44 +213,14 @@ namespace Pacman
 			CheckArrivalToTarget(ref pac);
 
 			Point target = StrategyPicker.GetTargetFromStrategy(ref pac);
-			if (pac.currentTarget == null)
-			{
-				Console.Error.WriteLine("Current target is null: pac id" + pac.id.ToString());
 
-			}
-			else
-			{
-				Console.Error.WriteLine("Current target:" + pac.currentTarget.ToString() + " target:" + target.ToString());
-
-			}
-
-			if (pac.currentTarget != null && target.Equals(pac.currentTarget))
-			{
-				Console.Error.WriteLine("Targets are EQUAL!!!");
-				if (pac.isInCollision)
-				{
-					Console.Error.WriteLine("Collision! pac id:" + pac.id.ToString());
-					FindPath(pac, new Node(pac.origin), new Node(target));
-				}
-				else
-				{
-					if (pac.isOnPath)
-					{
-						Console.Error.WriteLine("Incrementing index! pac id:" + pac.id.ToString());
-						pac.indexOnPath++;
-					}
-				}
-			}
-			else
-			{
-				FindPath(pac, new Node(pac.origin), new Node(target));
-				pac.previousTarget = pac.currentTarget;
-				pac.currentTarget = target;
-			}
+			pac.previousTarget = pac.currentTarget;
+			pac.currentTarget = target;
 
 			if (pac.currentTarget == null)
 			{
 				pac.currentTarget = new Point(pac.origin);
+				pac.isOnHold = true;
 				Console.Error.WriteLine("Waiting!");
 			}
 
@@ -288,69 +257,92 @@ namespace Pacman
 		}
 
 		public static void FindPaths()
-		{ 
-		
+		{
+			for (int i = 0; i < PacController.myPacs.Count; i++)
+			{
+				Pac pac = PacController.myPacs[i];
+				if (pac.isAlive)
+				{
+					//if it is on path, target hasn't changed and there is no collision, just proceed
+					if (pac.isOnPath && (pac.currentTarget == pac.previousTarget) && !pac.isInCollision)
+					{
+						pac.indexOnPath++;
+					}
+					else
+					{
+						FindPath(pac, new Node(pac.origin), new Node(pac.currentTarget));
+					}
+
+				}
+			}
 		}
 
 		public static void FindPath(Pac pac, Node start, Node end)
 		{
-			List<Point> obstacles = MarkObstacles(pac, end);
+			Console.Error.WriteLine("Pathfinding started! pac:" + pac.id.ToString());
+			List <Point> obstacles = MarkObstacles(pac, end);
 
-			List<Node> openSet = new List<Node>();
-			HashSet<Node> closedSet = new HashSet<Node>();
-
-			start.gCost = 0;
-			start.hCost = start.GetDistanceTo(end);
-			openSet.Add(start);
-
-			while (openSet.Count() > 0)
+			try
 			{
-				Node currentNode = openSet[0];
-				for (int i = 1; i < openSet.Count(); i++)
+				List<Node> openSet = new List<Node>();
+				HashSet<Node> closedSet = new HashSet<Node>();
+
+				start.gCost = 0;
+				start.hCost = start.GetDistanceTo(end);
+				openSet.Add(start);
+
+				while (openSet.Count() > 0)
 				{
-					if (openSet[i].fCost < currentNode.fCost || (openSet[i].fCost == currentNode.fCost && openSet[i].hCost < currentNode.hCost))
+					Node currentNode = openSet[0];
+					for (int i = 1; i < openSet.Count(); i++)
 					{
-						currentNode = openSet[i];
+						if (openSet[i].fCost < currentNode.fCost || (openSet[i].fCost == currentNode.fCost && openSet[i].hCost < currentNode.hCost))
+						{
+							currentNode = openSet[i];
+						}
 					}
-				}
+					//Console.Error.WriteLine("Pathfinding currentNode: " + currentNode.ToString());
 
-				openSet.Remove(currentNode);
-				closedSet.Add(currentNode);
+					openSet.Remove(currentNode);
+					closedSet.Add(currentNode);
 
-				if (currentNode.Equals(end))
-				{
-					MemorizePath(ref pac, start, currentNode);
-					Console.Error.WriteLine("Found path: pac:" + pac.id + " start:" + start.ToString() + " end:" + currentNode.ToString() + " distance: " + pac.distanceToTarget.ToString());
-					return;
-				}
-
-				List<Point> neighbours = Level.GetNeighbours(currentNode.x, currentNode.y);
-				foreach (Point neighbour in neighbours)
-				{
-					//Check if this works - Equals on point comparing only x and y so that this works when Point passed as a parameter although collection contains nodes
-					if (!closedSet.Contains(neighbour))
+					if (currentNode.Equals(end))
 					{
-
-						Node node;
-						if (!openSet.Contains(neighbour))
-						{
-							node = new Node(neighbour);
-							openSet.Add(node);
-						}
-						else 
-						{
-							node = openSet.Find(a => a.x == neighbour.x && a.y == neighbour.y);
-						}
-						node.gCost = currentNode.gCost + 1;
-						node.hCost = node.GetDistanceTo(end);
-						node.parent = currentNode;
+						MemorizePath(ref pac, start, currentNode);
+						Console.Error.WriteLine("Found path: pac:" + pac.id + " start:" + start.ToString() + " end:" + currentNode.ToString() + " distance: " + pac.distanceToTarget.ToString());
+						return;
 					}
-				}
 
+					List<Point> neighbours = Level.GetNeighbours(currentNode.x, currentNode.y);
+					foreach (Point neighbour in neighbours)
+					{
+						Console.Error.WriteLine("Pathfinding neighbour: " + neighbour.ToString());
+						//Check if this works - Equals on point comparing only x and y so that this works when Point passed as a parameter although collection contains nodes
+						if (!closedSet.Contains(neighbour))
+						{
+
+							Node node;
+							if (!openSet.Contains(neighbour))
+							{
+								node = new Node(neighbour);
+								openSet.Add(node);
+							}
+							else
+							{
+								node = openSet.Find(a => a.x == neighbour.x && a.y == neighbour.y);
+							}
+							node.gCost = currentNode.gCost + 1;
+							node.hCost = node.GetDistanceTo(end);
+							node.parent = currentNode;
+						}
+					}
+
+				}
 			}
-
-			UnmarkObstacles(obstacles);
-			return;
+			finally
+			{
+				UnmarkObstacles(obstacles);
+			}
 		}
 
 		public static void MemorizePath(ref Pac pac, Node start, Node end)
@@ -389,6 +381,7 @@ namespace Pacman
 				Point otherPacDirection = GetDirectionSigns(otherPac.previousOrigin, otherPac.origin);
 				if (ShouldTreatPacAsObstacle(pac, otherPac, target))
 				{
+					Console.Error.WriteLine("Obstacle found:" + otherPac.origin.ToString());
 					result.Add(otherPac.origin);
 					Level.map[otherPac.origin.y, otherPac.origin.x] = -1;
 				}
@@ -450,6 +443,7 @@ namespace Pacman
 			bool result =	(otherPacDirection.x == 0 && otherPacDirection.y == 0) || 
 							((myPacDirection.x == -otherPacDirection.x) && Math.Abs(myPac.origin.x + myPacDirection.x - otherPac.origin.x - otherPacDirection.x) < Math.Abs(myPac.origin.x - otherPac.origin.x)) ||
 							((myPacDirection.y == -otherPacDirection.y) && Math.Abs(myPac.origin.y + myPacDirection.y - otherPac.origin.y - otherPacDirection.y) < Math.Abs(myPac.origin.y - otherPac.origin.y));
+			Console.Error.WriteLine("Pac directions. myPac:" + myPac.id.ToString() + " direction:" + myPacDirection.ToString() + " other pac:" + otherPac.id.ToString() + " direction:" + otherPacDirection.ToString());
 			return result;
 		}
 	}
