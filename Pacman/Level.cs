@@ -31,7 +31,7 @@ namespace Pacman
                     map[i, j] = levelRows[i][j] == ' '? 1: 0;
                 }
             }
-            PrintMatrix(levelRows);
+            //PrintMatrix(levelRows);
         }
 
         public static void CalculateJunctions()

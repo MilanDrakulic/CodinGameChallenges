@@ -23,7 +23,7 @@ namespace Pacman
             Level.InitializeLevel(width, height);
             Level.StringsToMatrix(levelRows);
             Level.CalculateJunctions();
-            Level.PrintJunctions();
+            //Level.PrintJunctions();
 
             // game loop
             while (true)

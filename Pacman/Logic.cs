@@ -271,17 +271,27 @@ namespace Pacman
 					}
 					else
 					{
-						FindPath(pac, new Node(pac.origin), new Node(pac.currentTarget));
+						List<Point> path = null;
+						if (FindPath(pac, new Node(pac.origin), new Node(pac.currentTarget), out path))
+						{
+							SetPath(pac, path);
+						}
+						else
+						{
+							pac.isOnPath = false;
+							pac.isOnHold = true;							
+						}
 					}
 
 				}
 			}
 		}
 
-		public static void FindPath(Pac pac, Node start, Node end)
+		public static bool FindPath(Pac pac, Node start, Node end, out List<Point> path)
 		{
 			Console.Error.WriteLine("Pathfinding started! pac:" + pac.id.ToString());
 			List <Point> obstacles = MarkObstacles(pac, end);
+			path = null;
 
 			try
 			{
@@ -307,18 +317,17 @@ namespace Pacman
 					openSet.Remove(currentNode);
 					closedSet.Add(currentNode);
 
-					if (currentNode.Equals(end))
+					if (currentNode == end)
 					{
-						MemorizePath(ref pac, start, currentNode);
-						Console.Error.WriteLine("Found path: pac:" + pac.id + " start:" + start.ToString() + " end:" + currentNode.ToString() + " distance: " + pac.distanceToTarget.ToString());
-						return;
+						path = CalculatePath(ref pac, start, currentNode);
+						Console.Error.WriteLine("Found path: pac:" + pac.id + " start:" + start.ToString() + " end:" + currentNode.ToString() + " distance: " + path.Count.ToString());
+						return true;
 					}
 
 					List<Point> neighbours = Level.GetNeighbours(currentNode.x, currentNode.y);
 					foreach (Point neighbour in neighbours)
 					{
 						//Console.Error.WriteLine("Pathfinding neighbour: " + neighbour.ToString());
-						//Check if this works - Equals on point comparing only x and y so that this works when Point passed as a parameter although collection contains nodes
 						if (!closedSet.Contains(neighbour))
 						{
 
@@ -339,8 +348,8 @@ namespace Pacman
 					}
 
 				}
-				pac.isOnPath = false;
-				pac.isOnHold = true;
+
+				return false;
 			}
 			finally
 			{
@@ -348,25 +357,28 @@ namespace Pacman
 			}
 		}
 
-		public static void MemorizePath(ref Pac pac, Node start, Node end)
+		public static void SetPath(Pac pac, List<Point> path)
+		{
+			pac.isOnPath = true;
+			pac.indexOnPath = 0;
+			pac.distanceToTarget = path.Count;
+			pac.path = path;
+		}
+		
+		public static List<Point> CalculatePath(ref Pac pac, Node start, Node end)
 		{
 			List<Point> path = new List<Point>();
-			int distance = 0;
 
 			Node currentNode = end;
 			while (currentNode != start)
 			{
-				distance++;
 				path.Add(currentNode as Point);
 				currentNode = currentNode.parent;
-				Console.Error.WriteLine("Added to path: " + currentNode.ToString());
+				//Console.Error.WriteLine("Added to path: " + currentNode.ToString());
 			}
 
 			path.Reverse();
-			pac.isOnPath = true;
-			pac.indexOnPath = 0;
-			pac.distanceToTarget = distance;
-			pac.path = path;
+			return path;
 		}
 
 		//Not thread safe
