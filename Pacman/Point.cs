@@ -48,25 +48,57 @@ namespace Pacman
 			}
 		}
 
-		public double GetDistanceTo(Point target)
+		public int GetDistanceTo(Point target)
 		{
 			int a = target.x - x;
 			int b = target.y - y;
 			//Euclidian
-			return Math.Sqrt(a*a + b*b);
+			//return Math.Sqrt(a*a + b*b);
 
 			////Manhattan
-			//return Math.Abs(a) + Math.Abs(b);
-		}
-
-		public bool IsValid()
-		{
-			return (x != -1) && (y != -1);
+			return Math.Abs(a) + Math.Abs(b);
 		}
 
 		public override string ToString()
 		{
 			return x.ToString() + " " + y.ToString();
 		}
+	}
+
+	public class Node : Point
+	{
+		public int gCost;
+		public int hCost;
+
+		public Node parent;
+
+		public Node(int x, int y)
+		{
+			this.x = x;
+			this.y = y;
+		}
+
+		public Node(Point point)
+		{
+			x = point.x;
+			y = point.y;
+		}
+
+		public Node(Point point, int gCost, int hCost)
+			:this(point)
+		{
+			this.gCost = gCost;
+			this.hCost = hCost;
+		}
+
+		public int fCost
+		{
+			get
+			{
+				return gCost + hCost;
+			}
+		}
+
+
 	}
 }

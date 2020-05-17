@@ -23,8 +23,17 @@ namespace Pacman
 				return;
 			}
 			Console.Error.WriteLine("Swapping targets - Previous: " + previousOwner.id.ToString() + " New" + newOwner.id.ToString() + " Pellet:" + target.ToString());
+			//if (newOwner.currentTarget == target)
+			//{
+			//	newOwner.isOnPath = false;
+			//}
+			//else
+			//{
+			//	newOwner.isOnPath = true;
+			//}
 			newOwner.currentTarget = target;
 			previousOwner.currentTarget = null;
+			//previousOwner.isOnPath = false;
 			newOwner = previousOwner;
 			return;
 		}

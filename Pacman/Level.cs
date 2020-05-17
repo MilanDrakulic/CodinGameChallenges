@@ -114,6 +114,55 @@ namespace Pacman
             return result;
         }
 
+        public static List<Node> GetNeighbourNodes(int x, int y)
+        {
+            List<Node> result = new List<Node>();
+
+            if (x == 0)
+            {
+                //Should be always true per prerequisites
+                if (map[y, map.GetLength(1) - 1] > 0)
+                {
+                    result.Add(new Node(map.GetLength(1) - 1, y));
+                }
+            }
+            else
+            {
+                if (CheckNeighbour(x - 1, y))
+                {
+                    result.Add(new Node(x - 1, y));
+                }
+            }
+
+            if (x == map.GetLength(1) - 1)
+            {
+                //Should be always true per prerequisites
+                if (map[y, 0] > 0)
+                {
+                    result.Add(new Node(0, y));
+                }
+            }
+            else
+            {
+                if (CheckNeighbour(x + 1, y))
+                {
+                    result.Add(new Node(x + 1, y));
+                }
+            }
+
+            if (CheckNeighbour(x, y - 1))
+            {
+                result.Add(new Node(x, y - 1));
+            }
+
+            if (CheckNeighbour(x, y + 1))
+            {
+                result.Add(new Node(x, y + 1));
+            }
+
+            return result;
+        }
+
         public static bool CheckNeighbour(int x, int y)
         {
             bool result = false;

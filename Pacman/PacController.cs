@@ -17,6 +17,7 @@ namespace Pacman
 	{
 		public int id;
 		public Point origin;
+		public Point previousOrigin;
 		public PacType pacType;
 		public int cooldown = 0;
 		public int speedActivatedTurn = -Common.SpeedCooldownDuration;
@@ -28,6 +29,11 @@ namespace Pacman
 		public bool isAlive = true;
 		public bool hasFixedTarget;
 		public string latestStrategy;
+
+		public bool isOnPath;
+		public List<Point> path;
+		public int indexOnPath;
+		public int distanceToTarget;
 
 		public Pac(int id, Point origin, string pacType)
 		{
@@ -141,8 +147,10 @@ namespace Pacman
 					else
 					{
 						pac.cooldown = currentPac.cooldown;
-						pac.origin.x = currentPac.origin.x;
-						pac.origin.y = currentPac.origin.y;
+						pac.previousOrigin = pac.origin;
+						pac.origin = currentPac.origin;
+						//pac.origin.x = currentPac.origin.x;
+						//pac.origin.y = currentPac.origin.y;
 						pac.CheckFixedTarget();
 						pac.isInCollision = false;
 						Console.Error.WriteLine("Synced Pac! Id: " + pac.id.ToString() + " Pac origin: " + pac.origin.ToString());
@@ -207,7 +215,8 @@ namespace Pacman
 		{
 			foreach (Pac pac in myPacs)
 			{
-				if ((pac.previousTarget == pac.currentTarget) && (!pac.isOnHold))
+				if (pac.origin == pac.previousOrigin)
+				//if ((pac.previousTarget == pac.currentTarget) && (!pac.isOnHold))
 				{
 					pac.isInCollision = true;
 				}

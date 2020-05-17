@@ -29,7 +29,7 @@ namespace Pacman
             while (true)
             {
                 Common.CurrentTurn++;
-                PacController.ClearCurrentTargets();
+                //PacController.ClearCurrentTargets();
                 //Common.currentTargets.Clear();
 
                 inputs = Console.ReadLine().Split(' ');
@@ -52,6 +52,7 @@ namespace Pacman
                     PacController.AddPac(pacId, x, y, typeId, mine, abilityCooldown);
                 }
                 PacController.SyncPacs();
+                PacController.DetectCollisions();
 
                 PelletController.ClearPellets();
 
@@ -79,16 +80,8 @@ namespace Pacman
                     }
                 }
 
-                // Write an action using Console.WriteLine()
-                // To debug: Console.Error.WriteLine("Debug messages...");
-                for (int i = 0; i < PacController.myPacs.Count; i++)
-                {
-                    Pac pac = PacController.myPacs[i];
-                    if (pac.isAlive)
-                    {
-                        Logic.SetTarget(ref pac);
-                    }
-                }
+                Logic.SetTargets();
+                Logic.FindPaths();
 
                 string output = "";
                 for (int i = 0; i < PacController.myPacs.Count; i++)
@@ -99,7 +92,16 @@ namespace Pacman
                         continue;
                     }
 
-                    Point target = pac.currentTarget;
+                    Point target;
+                    if (pac.isOnPath)
+                    {
+                        Console.Error.WriteLine("Pac on path: id: " + pac.id.ToString() + " index:" + pac.indexOnPath + " target:" + pac.currentTarget.ToString() + " distance:" + pac.distanceToTarget.ToString());
+                        target = pac.path[pac.indexOnPath];
+                    }
+                    else
+                    {
+                        target = pac.currentTarget;
+                    }
 
                     output += (output == "") ? "" : "|";
                     output += "MOVE " + pac.id.ToString() + " " + target.ToString();
