@@ -210,11 +210,11 @@ namespace Pacman
 
 		public static void SetTarget(ref Pac pac)
 		{
+			pac.previousTarget = pac.currentTarget;
+
 			CheckArrivalToTarget(ref pac);
 
 			Point target = StrategyPicker.GetTargetFromStrategy(ref pac);
-
-			pac.previousTarget = pac.currentTarget;
 			pac.currentTarget = target;
 
 			if (pac.currentTarget == null)
@@ -233,6 +233,7 @@ namespace Pacman
 			if (pac.isOnPath && pac.origin.Equals(pac.currentTarget))
 			{
 				Console.Error.WriteLine("Arrival! Pac: " + pac.id + " target: " + pac.currentTarget.ToString());
+				pac.currentTarget = null;
 				pac.isOnPath = false;
 				pac.hasFixedTarget = false;
 				pac.indexOnPath = -1;
@@ -316,7 +317,7 @@ namespace Pacman
 					List<Point> neighbours = Level.GetNeighbours(currentNode.x, currentNode.y);
 					foreach (Point neighbour in neighbours)
 					{
-						Console.Error.WriteLine("Pathfinding neighbour: " + neighbour.ToString());
+						//Console.Error.WriteLine("Pathfinding neighbour: " + neighbour.ToString());
 						//Check if this works - Equals on point comparing only x and y so that this works when Point passed as a parameter although collection contains nodes
 						if (!closedSet.Contains(neighbour))
 						{
@@ -338,6 +339,8 @@ namespace Pacman
 					}
 
 				}
+				pac.isOnPath = false;
+				pac.isOnHold = true;
 			}
 			finally
 			{

@@ -48,7 +48,7 @@ namespace Pacman
 
 		public static bool ExistsAtPosition(Point position)
 		{
-			return BigPellets.Contains(position);
+			return BigPellets.Contains(position) || Pellets.Contains(position);
 			//return BigPellets.Where(a => a.x == position.x && a.y == position.y).Any() || Pellets.Where(a => a.x == position.x && a.y == position.y).Any();
 		}
 
