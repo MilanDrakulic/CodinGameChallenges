@@ -309,5 +309,10 @@ namespace Pacman
                 Console.Error.WriteLine(junction.Key.ToString() + " #" + junction.Value.ToString());
             }
         }
+
+        //public static Point GetClosestVisibleJunction(Point origin, Point direction = null)
+        //{ 
+        //    List<Point> 
+        //}
     }
 }

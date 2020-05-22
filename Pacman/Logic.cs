@@ -17,9 +17,21 @@ namespace Pacman
 	{
 		public static Point GetTargetFromStrategy(ref Pac pac)
 		{
-			Point result = null;
+			Point result;
 
-			if (PelletController.BigPellets.Count > 0)
+			result = new AttackStrategy().GetTarget(ref pac);
+			if (result != null && pac.inPursuit)
+			{
+				return result;
+			}
+			else
+			{
+				pac.inPursuit = false;
+			}
+
+			result = new MimicStrategy().GetTarget(ref pac);
+
+			if ((result == null) && (PelletController.BigPellets.Count > 0))
 			{
 				result = new GreedyStrategy().GetTarget(ref pac);
 				result = pac.ResetTargetIfStationary(result);
@@ -67,6 +79,7 @@ namespace Pacman
 					if (PacController.GetCurrentTargets().Values.Contains(bigPellet))
 					{
 						Pac previousTargetOwner = PacController.GetPacWithCurrentTarget(bigPellet);
+
 						if ((pac.origin.GetDistanceTo(bigPellet) < previousTargetOwner.origin.GetDistanceTo(bigPellet)))
 						{
 							Common.SwapPacTargets(ref previousTargetOwner, ref pac, bigPellet);
@@ -194,10 +207,94 @@ namespace Pacman
 		}
 	}
 
+	public class AttackStrategy : IPacStrategy
+	{
+		public Point GetTarget(ref Pac pac)
+		{
+			Point target = null;
+			Pac enemyPac = PacController.GetClosestEnemy(pac);
+			//Pac enemyPac = PacController.GetClosestVisibleEnemy(pac, true);
+			int distanceToEnemy;
+
+			if (enemyPac != null)
+			{
+				distanceToEnemy = pac.origin.GetDistanceTo(enemyPac.origin);
+				PacType strongerThanMe = Common.GetStrongerPacType(pac.pacType);
+				PacType strongerThanHim = Common.GetStrongerPacType(enemyPac.pacType);
+
+				Console.Error.WriteLine("ATTACK! pacType" + pac.pacType.ToString() + " strongerThanHim:" + strongerThanHim.ToString() + " distance:" + distanceToEnemy.ToString());
+				if (pac.pacType == strongerThanHim && distanceToEnemy <= 6)
+				{
+					pac.shouldActivateSpeed = true;
+					pac.inPursuit = true;
+					target = enemyPac.origin;
+				}
+				else
+				{
+					if (pac.cooldown > (enemyPac.speedTurnsLeft > 0 ? distanceToEnemy / 2 : distanceToEnemy))
+					{ 
+						//Bezanija!!!
+						//Level.GetClosestJunctionInDirection();
+					}
+				}
+
+
+			}
+			Console.Error.WriteLine("PacId:" + pac.id + " Strategy: Attack " + ((target == null) ? "null" : target.ToString()) + " inPursuit:" + pac.inPursuit.ToString());
+			return target;
+		}
+	}
+
+	public class MimicStrategy : IPacStrategy
+	{
+		public Point GetTarget(ref Pac pac)
+		{
+			Console.Error.WriteLine("Mimic strategy start");
+			Point target = null;
+			Pac enemyPac = PacController.GetClosestVisibleEnemy(pac, true);
+
+			int distance = Common.minDistanceForSwitch;
+			if (enemyPac != null)
+			{
+				if (enemyPac.speedTurnsLeft > 0)
+				{
+					if (pac.speedTurnsLeft > 0)
+					{
+						distance = distance + 2;
+					}
+					else
+					{
+						distance = distance + 1;
+					}
+				}
+			}
+
+			if (enemyPac != null && pac.origin.GetDistanceTo(enemyPac.origin) <= distance)
+			{
+				PacType strongerType = Common.GetStrongerPacType(enemyPac.pacType);
+				if (pac.pacType != strongerType)
+				{
+					pac.shouldActivateSwitch = true;
+					pac.switchTo = strongerType;
+				}
+			}
+			else 
+			{
+				return null;
+			}
+
+			target = enemyPac.origin;
+
+			Console.Error.WriteLine("PacId:" + pac.id + " Strategy: Mimic " + ((target == null) ? "null" : target.ToString()));
+			return target;
+		}
+	}
+
 	public static class Logic
 	{
 		public static void SetTargets()
 		{
+			Console.Error.WriteLine("SetTargets, mypacs count:" + PacController.myPacs.Count().ToString());
 			for (int i = 0; i < PacController.myPacs.Count; i++)
 			{
 				Pac pac = PacController.myPacs[i];
@@ -210,8 +307,6 @@ namespace Pacman
 
 		public static void SetTarget(ref Pac pac)
 		{
-			pac.previousTarget = pac.currentTarget;
-
 			CheckArrivalToTarget(ref pac);
 
 			Point target = StrategyPicker.GetTargetFromStrategy(ref pac);
@@ -265,16 +360,32 @@ namespace Pacman
 				if (pac.isAlive)
 				{
 					//if it is on path, target hasn't changed and there is no collision, just proceed
-					if (pac.isOnPath && (pac.currentTarget == pac.previousTarget) && !pac.isInCollision)
+					if (pac.isOnPath && (pac.currentTarget == pac.previousTarget) && (pac.origin != pac.previousOrigin))
 					{
 						pac.indexOnPath++;
 					}
 					else
 					{
-						List<Point> path = null;
+						//if (pac.isOnHold || pac.isInCollision)
+						//{
+						//	pac.isOnPath = false;
+						//	pac.previousTarget = pac.currentTarget;
+						//	//pac.currentTarget = null;
+						//	continue;
+						//}
+
+						List<Point> path;
 						if (FindPath(pac, new Node(pac.origin), new Node(pac.currentTarget), out path))
 						{
-							SetPath(pac, path);
+							if (path.Count > 0)
+							{
+								SetPath(pac, path);
+							}
+							else
+							{
+								pac.isOnPath = false;
+								pac.isOnHold = true;
+							}
 						}
 						else
 						{
@@ -359,7 +470,9 @@ namespace Pacman
 
 		public static void SetPath(Pac pac, List<Point> path)
 		{
+			pac.previousTarget = pac.currentTarget;
 			pac.isOnPath = true;
+			pac.isOnHold = false;
 			pac.indexOnPath = 0;
 			pac.distanceToTarget = path.Count;
 			pac.path = path;
@@ -385,7 +498,7 @@ namespace Pacman
 		public static List<Point> MarkObstacles(Pac pac, Point target)
 		{
 			List<Point> result = new List<Point>();
-			Point pacDirection = GetDirectionSigns(pac.origin, target);
+			Point pacDirection = PacController.GetDirectionSigns(pac.origin, target);
 
 			foreach (Pac otherPac in PacController.myPacs)
 			{
@@ -393,8 +506,8 @@ namespace Pacman
 				{
 					continue;
 				}
-				Point otherPacDirection = GetDirectionSigns(otherPac.previousOrigin, otherPac.origin);
-				if (ShouldTreatPacAsObstacle(pac, otherPac, target))
+				Point otherPacDirection = PacController.GetDirectionSigns(otherPac.previousOrigin, otherPac.origin);
+				if (PacController.HaveOppositeDirection(pac, otherPac, target))
 				{
 					Console.Error.WriteLine("Obstacle found:" + otherPac.origin.ToString());
 					result.Add(otherPac.origin);
@@ -412,54 +525,6 @@ namespace Pacman
 			{
 				Level.map[tile.y, tile.x] = 1;
 			}
-		}
-
-		public static Point GetDirectionSigns(Point start, Point end)
-		{
-			int xSign = Math.Sign(end.x - start.x);
-			int ySign = Math.Sign(end.y - start.y);
-			return new Point(xSign, ySign);
-		}
-
-		public static bool ShouldTreatPacAsObstacle(Pac myPac, Pac otherPac, Point myPacTarget = null)
-		{
-			Point myPacDirection;
-			Point otherPacDirection;
-			if (myPacTarget != null)
-			{
-				myPacDirection = GetDirectionSigns(myPac.origin, myPacTarget);
-			}
-			else
-			{
-				//Special case for first turn
-				if (myPac.previousOrigin == null)
-				{
-					return false;
-					//myPacDirection = new Point(0, 0);
-				}
-				else
-				{ 
-					myPacDirection = GetDirectionSigns(myPac.previousOrigin, myPac.origin);
-				}
-			}
-
-			//Special case for first turn
-			if (otherPac.previousOrigin == null)
-			{
-				return false;
-				//otherPacDirection = new Point(0, 0);
-			}
-			else
-			{
-				otherPacDirection = GetDirectionSigns(otherPac.previousOrigin, otherPac.origin);
-			}
-
-			//either other pac is stationary, or distance in x or y between two pacs is getting smaller
-			bool result =	(otherPacDirection.x == 0 && otherPacDirection.y == 0) || 
-							((myPacDirection.x == -otherPacDirection.x) && Math.Abs(myPac.origin.x + myPacDirection.x - otherPac.origin.x - otherPacDirection.x) < Math.Abs(myPac.origin.x - otherPac.origin.x)) ||
-							((myPacDirection.y == -otherPacDirection.y) && Math.Abs(myPac.origin.y + myPacDirection.y - otherPac.origin.y - otherPacDirection.y) < Math.Abs(myPac.origin.y - otherPac.origin.y));
-			Console.Error.WriteLine("Pac directions. myPac:" + myPac.id.ToString() + " direction:" + myPacDirection.ToString() + " other pac:" + otherPac.id.ToString() + " direction:" + otherPacDirection.ToString());
-			return result;
 		}
 	}
 }

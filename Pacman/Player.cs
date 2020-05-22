@@ -49,10 +49,10 @@ namespace Pacman
                     int speedTurnsLeft = int.Parse(inputs[5]); // unused in wood leagues
                     int abilityCooldown = int.Parse(inputs[6]); // unused in wood leagues
 
-                    PacController.AddPac(pacId, x, y, typeId, mine, abilityCooldown);
+                    PacController.AddPac(pacId, x, y, typeId, mine, speedTurnsLeft, abilityCooldown);
                 }
                 PacController.SyncPacs();
-                PacController.DetectCollisions();
+                //PacController.DetectCollisions();
 
                 PelletController.ClearPellets();
 
@@ -83,6 +83,8 @@ namespace Pacman
                 Logic.SetTargets();
                 Logic.FindPaths();
 
+                List<Point> targets = new List<Point>();
+
                 string output = "";
                 for (int i = 0; i < PacController.myPacs.Count; i++)
                 {
@@ -103,24 +105,43 @@ namespace Pacman
                         target = pac.currentTarget;
                     }
 
+                    if (targets.Contains(target))
+                    {
+                        Pac otherPac = PacController.GetPacWithCurrentTarget(target);
+                        if (otherPac != null && PacController.myPacs[i].origin.GetDistanceTo(otherPac.origin) <= 2)
+                        {
+                            target = PacController.myPacs[i].previousTarget;
+                        }
+                    }
+                    else
+                    {
+                        targets.Add(target);
+                    }
+                    
+
+                    string command = "";
+                    if (pac.cooldown == 0 && pac.shouldActivateSwitch)
+                    {
+                        command = "SWITCH " + pac.id.ToString() + " " + pac.switchTo.ToString();
+                    }
+                    else
+                    {
+                        if (pac.cooldown == 0)// && pac.shouldActivateSpeed)
+                        {
+                            command = "SPEED " + pac.id.ToString();
+                        }
+                        else
+                        {
+                            if (target != null)
+                            {
+                                command = "MOVE " + pac.id.ToString() + " " + target.ToString();
+                            }
+                        }
+                    }
                     output += (output == "") ? "" : "|";
-                    output += "MOVE " + pac.id.ToString() + " " + target.ToString();
+                    output += command;
                 }
 
-                //foreach (Pac pac in PacController.myPacs)
-                //{
-                //    Logic.SetTarget(ref pac);
-                //    Point target = pac.currentTarget;
-
-                //    output += (output == "") ? "" : "|";
-                //    output += "MOVE " + pac.id.ToString() + " " + target.ToString();
-
-                //    // if (!Logic.CurrentTargets[pac.Id].onHold && pac.Cooldown == 0)
-                //    // {
-                //    //     output += " | SPEED " + pac.Id.ToString();
-                //    //     //Console.WriteLine("SPEED " + pac.Id.ToString());
-                //    // }
-                //}
                 Console.WriteLine(output);
 
             }
