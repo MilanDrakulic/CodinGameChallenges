@@ -125,7 +125,7 @@ class Player
                 }
                 else
                 {
-                    if (pac.cooldown == 0)// && pac.shouldActivateSpeed)
+                    if ((pac.cooldown == 0) && (pac.shouldActivateSpeed))
                     {
                         command = "SPEED " + pac.id.ToString();
                     }
@@ -201,7 +201,7 @@ public class GreedyStrategy : IPacStrategy
 {
 	public Point GetTarget(ref Pac pac)
 	{
-		if (pac.currentTarget != null && PelletController.ExistsAtPosition(pac.currentTarget))// && !PacController.GetCurrentTargets().Values.Contains(pac.currentTarget))
+		if (pac.currentTarget != null && PelletController.ExistsAtPosition(pac.currentTarget) && pac.isOnPath)// && !PacController.GetCurrentTargets().Values.Contains(pac.currentTarget))
 		{
 			Common.WriteLine(7, "Greedy - Keeping current target:" + pac.currentTarget.ToString());
 			return pac.currentTarget;
@@ -251,7 +251,7 @@ public class VisibleStrategy : IPacStrategy
 {
 	public Point GetTarget(ref Pac pac)
 	{
-		if (pac.currentTarget != null && PelletController.ExistsAtPosition(pac.currentTarget))// && !PacController.GetCurrentTargets().Values.Contains(pac.currentTarget))
+		if (pac.currentTarget != null && PelletController.ExistsAtPosition(pac.currentTarget) && pac.isOnPath)// && !PacController.GetCurrentTargets().Values.Contains(pac.currentTarget))
 		{
 			Common.WriteLine(7, "Visible - Keeping current target:" + pac.currentTarget.ToString());
 			return pac.currentTarget;
@@ -302,7 +302,7 @@ public class JunctionsStrategy : IPacStrategy
 		double minDistance = Double.MaxValue;
 		double distance;
 
-		if (pac.currentTarget != null && pac.currentTarget.hasVisiblePellets)// && !PacController.GetCurrentTargets().Values.Contains(pac.currentTarget))
+		if (pac.currentTarget != null && pac.currentTarget.hasVisiblePellets && pac.isOnPath)// && !PacController.GetCurrentTargets().Values.Contains(pac.currentTarget))
 		{
 			Common.WriteLine(7, "Junction - Keeping current target:" + pac.currentTarget.ToString());
 			return pac.currentTarget;
@@ -360,8 +360,8 @@ public class AttackStrategy : IPacStrategy
 	public Point GetTarget(ref Pac pac)
 	{
 		Point target = null;
-		Pac enemyPac = PacController.GetClosestEnemy(pac);
-		//Pac enemyPac = PacController.GetClosestVisibleEnemy(pac, true);
+		//Pac enemyPac = PacController.GetClosestEnemy(pac);
+		Pac enemyPac = PacController.GetClosestVisibleEnemy(pac);
 		int distanceToEnemy = 0;
 
 		if (enemyPac != null)
@@ -369,21 +369,48 @@ public class AttackStrategy : IPacStrategy
 			distanceToEnemy = pac.origin.GetDistanceTo(enemyPac.origin);
 			PacType strongerThanMe = Common.GetStrongerPacType(pac.pacType);
 			PacType strongerThanHim = Common.GetStrongerPacType(enemyPac.pacType);
-			if (pac.pacType == strongerThanHim && distanceToEnemy <= 6)
+
+			Common.WriteLine(7, "Attack pacType" + pac.pacType.ToString() + " enemyPacType:" + enemyPac.pacType.ToString() + " cooldown:" + enemyPac.cooldown.ToString() + " type:" + enemyPac.pacType.ToString());
+			if (enemyPac.cooldown > distanceToEnemy / 2)
 			{
 				Common.WriteLine(7, "ATTACK! pacType" + pac.pacType.ToString() + " enemyPacType:" + enemyPac.pacType.ToString() + " distance:" + distanceToEnemy.ToString());
-				pac.shouldActivateSpeed = true;
+				if (pac.pacType == strongerThanHim)
+				{
+					pac.shouldActivateSpeed = true;
+					//if (!PacController.HaveOppositeDirection(pac, enemyPac, pac.currentTarget))
+					//{
+					//	pac.shouldActivateSpeed = true;
+					//}
+				}
+				else
+				{
+					pac.shouldActivateSwitch = true;
+					pac.switchTo = strongerThanHim;
+					//if (PacController.HaveOppositeDirection(pac, enemyPac, pac.currentTarget))
+					//{
+					//	pac.shouldActivateSwitch = true;
+					//	pac.switchTo = strongerThanHim;
+					//}
+				}
 				pac.inPursuit = true;
 				target = enemyPac.origin;
 			}
-			else
-			{
-				if (pac.cooldown > (enemyPac.speedTurnsLeft > 0 ? distanceToEnemy / 2 : distanceToEnemy))
-				{ 
-					//Bezanija!!!
-					//Level.GetClosestJunctionInDirection();
-				}
-			}
+
+			//if (pac.pacType == strongerThanHim && distanceToEnemy <= 6 && enemyPac.cooldown > distanceToEnemy/2)
+			//{
+			//	Common.WriteLine(7, "ATTACK! pacType" + pac.pacType.ToString() + " enemyPacType:" + enemyPac.pacType.ToString() + " distance:" + distanceToEnemy.ToString());
+			//	pac.shouldActivateSpeed = true;
+			//	pac.inPursuit = true;
+			//	target = enemyPac.origin;
+			//}
+			//else
+			//{
+			//	if (pac.cooldown > (enemyPac.speedTurnsLeft > 0 ? distanceToEnemy / 2 : distanceToEnemy))
+			//	{ 
+			//		//Bezanija!!!
+			//		//Level.GetClosestJunctionInDirection();
+			//	}
+			//}
 
 
 		}
@@ -1318,8 +1345,9 @@ public static class PacController
 
 			if (Level.GetTilesVisibleFrom(myPac.origin).Contains(enemy.origin))
 			{
-				Common.WriteLine(8, "GetClosestVisibleEnemy match found! opositeDirection:" + withOppositeDirection.ToString());
 				distanceToEnemy = myPac.origin.GetDistanceTo(enemy.origin);
+				Common.WriteLine(8, "GetClosestVisibleEnemy match found! myPac:" + myPac.id.ToString() + " enemy:" + enemy.id.ToString() + " distance:" + distanceToEnemy.ToString() + " opositeDirection:" + withOppositeDirection.ToString());
+
 				if (withOppositeDirection)
 				{
 					if (PacController.HaveOppositeDirection(myPac, enemy, myPac.currentTarget))
