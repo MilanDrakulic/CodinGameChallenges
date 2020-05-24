@@ -7,6 +7,7 @@ using System.Collections.Generic;
 
 namespace PacmanAlt
 {
+
 class Player
 {
 	static void Main(string[] args)
@@ -54,7 +55,7 @@ class Player
 				PacController.AddPac(pacId, x, y, typeId, mine, speedTurnsLeft, abilityCooldown);
 			}
 			PacController.SyncPacs();
-			//PacController.DetectCollisions();
+			PacController.DetectCollisions();
 
 			PelletController.ClearPellets();
 
@@ -110,15 +111,15 @@ class Player
 				if (targets.Contains(target))
 				{
 					Pac otherPac = PacController.GetPacWithCurrentTarget(target);
-					if (otherPac != null && PacController.myPacs[i].origin.GetDistanceTo(otherPac.origin) <= 2)
+					if (otherPac != null && PacController.myPacs[i].origin.GetDistanceTo(otherPac.origin) <= 2 && pac.isInCollision)
 					{
-						target = PacController.myPacs[i].previousTarget;
+						target = pac.origin;
+						pac.isOnPath = false;
+						//target = PacController.myPacs[i].previousTarget;
 					}
 				}
-				else
-				{
-					targets.Add(target);
-				}
+
+				targets.Add(target);
 
 				string command = "";
 				if (pac.cooldown == 0 && pac.shouldActivateSwitch)
@@ -159,6 +160,16 @@ public static class StrategyPicker
 	public static Point GetTargetFromStrategy(ref Pac pac)
 	{
 		Point result = null;
+
+		//if in collision, detect if it's friendly or not and act appropriatelly
+		if (pac.isInCollision)
+		{
+			bool shouldActOnCollision = PacController.ActOnCollision(pac);
+			if (pac.currentTarget != null && !shouldActOnCollision)
+			{
+				return pac.currentTarget;
+			}
+		}
 
 		result = new AttackStrategy().GetTarget(ref pac);
 		if (result != null && pac.inPursuit)
@@ -372,8 +383,8 @@ public class AttackStrategy : IPacStrategy
 			PacType strongerThanMe = Common.GetStrongerPacType(pac.pacType);
 			PacType strongerThanHim = Common.GetStrongerPacType(enemyPac.pacType);
 
-			Common.WriteLine(7, "Attack pacType" + pac.pacType.ToString() + " enemyPacType:" + enemyPac.pacType.ToString() + " cooldown:" + enemyPac.cooldown.ToString() + " type:" + enemyPac.pacType.ToString());
-			if (enemyPac.cooldown > distanceToEnemy / 2)
+			Common.WriteLine(7, "Attack pacType" + pac.pacType.ToString() + " enemyPacType:" + enemyPac.pacType.ToString() + " cooldown:" + enemyPac.cooldown.ToString());
+			if (enemyPac.cooldown > distanceToEnemy / 2 && pac.cooldown == 0)
 			{
 				Common.WriteLine(7, "ATTACK! pacType" + pac.pacType.ToString() + " enemyPacType:" + enemyPac.pacType.ToString() + " distance:" + distanceToEnemy.ToString());
 				if (pac.pacType == strongerThanHim)
@@ -448,7 +459,7 @@ public class MimicStrategy : IPacStrategy
 			}
 		}
 
-		if (enemyPac != null && pac.origin.GetDistanceTo(enemyPac.origin) <= distance && PacController.HaveOppositeDirection(pac, enemyPac, pac.currentTarget))
+		if (enemyPac != null && pac.origin.GetDistanceTo(enemyPac.origin) <= distance && (PacController.HaveOppositeDirection(pac, enemyPac, pac.currentTarget) || enemyPac.GetPreviousOrigin(0) == null))
 		{
 			PacType strongerType = Common.GetStrongerPacType(enemyPac.pacType);
 			if (pac.pacType != strongerType)
@@ -549,8 +560,8 @@ public static class Logic
 			if (pac.isAlive)
 			{
 				//if it is on path, target hasn't changed and there is no collision, just proceed
-				if (pac.isOnPath && (pac.currentTarget == pac.previousTarget) && (pac.origin != pac.previousOrigin))
-				//if (pac.isOnPath && (pac.currentTarget == pac.previousTarget) && !(pac.isInCollision || pac.isOnHold))
+				if (pac.isOnPath && (pac.currentTarget == pac.previousTarget))
+				//if (pac.isOnPath && (pac.currentTarget == pac.previousTarget) && (pac.origin != pac.previousOrigin))
 				{
 					int step = 1;
 					if (pac.speedTurnsLeft > 0)
@@ -703,11 +714,11 @@ public static class Logic
 		//avoid collisions by treating own pacs as obstacles
 		foreach (Pac otherPac in PacController.myPacs)
 		{
-			if (pac.id == otherPac.id || !otherPac.isAlive || otherPac.previousOrigin == null)
+			if (pac.id == otherPac.id || !otherPac.isAlive || otherPac.GetPreviousOrigin(0) == null)
 			{
 				continue;
 			}
-			Point otherPacDirection = PacController.GetDirectionSigns(otherPac.previousOrigin, otherPac.origin);
+			Point otherPacDirection = PacController.GetDirectionSigns(otherPac.GetPreviousOrigin(0), otherPac.origin);
 			if (PacController.HaveOppositeDirection(pac, otherPac, target))
 			{
 				Common.WriteLine(5, "My pac obstacle found:" + otherPac.origin.ToString());
@@ -735,17 +746,23 @@ public static class Logic
 	{
 		Point result = null;
 		PacType strongerThanMe = Common.GetStrongerPacType(myPac.pacType);
-		if (!PacController.HaveOppositeDirection(myPac, enemyPac, target) ||
-			(myPac.cooldown > 0 && (enemyPac.pacType == strongerThanMe || enemyPac.cooldown == 0)))
-		{
-			return null;
-		}
 
-		if (PacController.HaveOppositeDirection(myPac, enemyPac, target))
+		if (myPac.cooldown > 0 && (enemyPac.pacType == strongerThanMe || enemyPac.cooldown == 0))
 		{
-			Common.WriteLine(5, "My pac obstacle found:" + enemyPac.origin.ToString());
 			result = enemyPac.origin;
 		}
+
+		//if (!PacController.HaveOppositeDirection(myPac, enemyPac, target) ||
+		//	(myPac.cooldown > 0 && (enemyPac.pacType == strongerThanMe || enemyPac.cooldown == 0)))
+		//{
+		//	return null;
+		//}
+
+		//if (PacController.HaveOppositeDirection(myPac, enemyPac, target))
+		//{
+		//	Common.WriteLine(5, "My pac obstacle found:" + enemyPac.origin.ToString());
+		//	result = enemyPac.origin;
+		//}
 
 		return result;
 	}
@@ -1027,7 +1044,8 @@ public class Pac
 {
 	public int id;
 	public Point origin;
-	public Point previousOrigin;
+	public Point[] previousOrigins;
+	//public Point previousOrigin;
 	public PacType pacType;
 	public int speedTurnsLeft;
 	public int cooldown = 0;
@@ -1089,6 +1107,34 @@ public class Pac
 		}
 		return result;
 	}
+
+	public Point GetPreviousOrigin(int index)
+	{
+		Point result = null;
+		if (previousOrigins == null)
+		{
+			previousOrigins = new Point[2];
+		}
+		else
+		{
+			result = previousOrigins[index];
+		}
+
+		return result;
+	}
+
+	public void SetPreviousOrigins()
+	{
+		if (GetPreviousOrigin(0) == null)
+		{
+			previousOrigins[0] = origin;
+		}
+		else
+		{
+			previousOrigins[0] = origin;
+			previousOrigins[1] = previousOrigins[0];
+		}
+	}
 }
 
 public static class PacController
@@ -1121,7 +1167,7 @@ public static class PacController
 			enemyCurrentPacs.Add(pac);
 			//enemyPacs.Add(pac);
 		}
-		Common.WriteLine(4, "Added Pac! Id: " + pac.id.ToString() + " Pac origin: " + pac.origin.ToString());
+		Common.WriteLine(4, "Added Pac! Id: " + pac.id.ToString() + " Pac origin: " + pac.origin.ToString() + " mine:" + mine.ToString() + " type:" + pacType);
 	}
 
 	public static Pac GetMyPac(int id)
@@ -1164,14 +1210,14 @@ public static class PacController
 					pac.speedTurnsLeft = currentPac.speedTurnsLeft;
 					pac.pacType = currentPac.pacType;
 					pac.cooldown = currentPac.cooldown;
-					pac.previousOrigin = pac.origin;
+					pac.SetPreviousOrigins();
 					pac.origin = currentPac.origin;
 					pac.CheckFixedTarget();
 					pac.isInCollision = false;
 					pac.shouldActivateSpeed = false;
 					pac.shouldActivateSwitch = false;
 					pac.isOnHold = false;
-					Common.WriteLine(4, "Synced Pac! Id: " + pac.id.ToString() + " Pac origin: " + pac.origin.ToString());
+					Common.WriteLine(8, "Synced Pac! Id: " + pac.id.ToString() + " Pac origin: " + pac.origin.ToString() + " prOr0:" + pac.GetPreviousOrigin(0) + " prOr1:" + pac.GetPreviousOrigin(1));
 				}
 			}
 		}
@@ -1201,9 +1247,10 @@ public static class PacController
 				{
 					pac.speedTurnsLeft = currentPac.speedTurnsLeft;
 					pac.cooldown = currentPac.cooldown;
-					pac.previousOrigin = pac.origin;
+					pac.SetPreviousOrigins();
 					pac.origin = currentPac.origin;
-					Common.WriteLine(5, "Synced enemy pac! Id: " + pac.id.ToString() + " Pac origin: " + pac.origin.ToString());
+					pac.pacType = currentPac.pacType;
+					Common.WriteLine(8, "Synced enemy pac! Id: " + pac.id.ToString() + " Pac origin: " + pac.origin.ToString() + " type:" + pac.pacType.ToString() + " prOr0:" + pac.GetPreviousOrigin(0) + " prOr1:" + pac.GetPreviousOrigin(1));
 				}
 			}
 
@@ -1222,8 +1269,8 @@ public static class PacController
 				if (currentPac == null)
 				{
 					enemyPacs.Add(enemyPac);
+					Common.WriteLine(5, "Synced added enemy pac! Id: " + enemyPac.id.ToString() + " Pac origin: " + enemyPac.origin.ToString() + " type:" + enemyPac.pacType.ToString());
 				}
-				Common.WriteLine(5, "Synced added enemy pac! Id: " + enemyPac.id.ToString() + " Pac origin: " + enemyPac.origin.ToString());
 			}
 		}
 		//First turn only - adding pacs
@@ -1285,19 +1332,58 @@ public static class PacController
 		foreach (Pac pac in myPacs)
 		{
 			//First turn special case
-			if (pac.previousOrigin == null)
-			{
-				continue;
-			}
-
-			if (pac.origin == pac.previousOrigin && pac.cooldown >= 9)
-			//if ((pac.previousTarget == pac.currentTarget) && (!pac.isOnHold))
+			if (pac.origin == pac.GetPreviousOrigin(0) && pac.origin == pac.GetPreviousOrigin(1))
 			{
 				Common.WriteLine(8, "Collision! Pac id:" + pac.id.ToString());
 				pac.isInCollision = true;
 			}
+
+			//if (pac.origin == pac.previousOrigin && pac.cooldown >= 9)
+			////if ((pac.previousTarget == pac.currentTarget) && (!pac.isOnHold))
+			//{
+			//	Common.WriteLine(8, "Collision! Pac id:" + pac.id.ToString());
+			//	pac.isInCollision = true;
+			//}
 		}
 		Common.WriteLine(2, "Finished detecting collisions");
+	}
+
+	//returns true if we should keep searching for target after this
+	public static bool ActOnCollision(Pac myPac)
+	{
+		bool result;
+		bool collidedWithTeammate = false;
+		foreach (Pac pac in myPacs)
+		{
+			if (pac.id == myPac.id)
+			{
+				continue;
+			}
+
+			if (HaveOppositeDirection(myPac, pac, myPac.currentTarget) && myPac.origin.GetDistanceTo(pac.origin) <= 2 && myPac.isInCollision && pac.isInCollision)
+			{
+				collidedWithTeammate = true;
+				break;
+			}
+		}
+
+		if (collidedWithTeammate)
+		{
+			myPac.isOnPath = false;
+			myPac.isInCollision = false;
+			result = true;
+			Common.WriteLine(8, "Colliding with friend!. myPac:" + myPac.id.ToString());
+		}
+		//he is colliding with an enemy of the same type, hence he should switch to superior type
+		else
+		{
+			PacType newType = Common.GetStrongerPacType(myPac.pacType);
+			myPac.shouldActivateSwitch = true;
+			myPac.switchTo = newType;
+			result = false;
+			Common.WriteLine(8, "Colliding with enemy!. myPac:" + myPac.id.ToString());
+		}
+		return result;
 	}
 
 	public static Pac GetClosestEnemy(Pac pac)
@@ -1399,26 +1485,26 @@ public static class PacController
 		else
 		{
 			//Special case for first turn
-			if (myPac.previousOrigin == null)
+			if (myPac.GetPreviousOrigin(0) == null)
 			{
 				return false;
 				//myPacDirection = new Point(0, 0);
 			}
 			else
 			{
-				myPacDirection = GetDirectionSigns(myPac.previousOrigin, myPac.origin);
+				myPacDirection = GetDirectionSigns(myPac.GetPreviousOrigin(0), myPac.origin);
 			}
 		}
 
 		//Special case for first turn or the first time we see enemy pack
-		if (otherPac.previousOrigin == null)
+		if (otherPac.GetPreviousOrigin(0) == null)
 		{
-			return false;
+			return Level.GetTilesVisibleFrom(myPac.origin).Contains(otherPac.origin) && PacController.IsEnemyPac(otherPac);
 			//otherPacDirection = new Point(0, 0);
 		}
 		else
 		{
-			otherPacDirection = GetDirectionSigns(otherPac.previousOrigin, otherPac.origin);
+			otherPacDirection = GetDirectionSigns(otherPac.GetPreviousOrigin(0), otherPac.origin);
 		}
 
 		//either other pac is stationary, or distance in x or y between two pacs is getting smaller
@@ -1430,6 +1516,18 @@ public static class PacController
 			Common.WriteLine(8, "Pac directions opposite. myPac:" + myPac.id.ToString() + " direction:" + myPacDirection.ToString() + " other pac:" + otherPac.id.ToString() + " direction:" + otherPacDirection.ToString());
 		}
 		return result;
+	}
+
+	public static bool IsEnemyPac(Pac pac)
+	{
+		foreach (Pac enemyPac in enemyPacs)
+		{
+			if (pac.origin == enemyPac.origin)
+			{
+				return true;
+			}
+		}
+		return false;
 	}
 }
 

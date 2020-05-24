@@ -4,6 +4,7 @@ using System.IO;
 using System.Text;
 using System.Collections;
 using System.Collections.Generic;
+using System.Globalization;
 
 class Player
 {
@@ -108,15 +109,15 @@ class Player
                 if (targets.Contains(target))
                 {
                     Pac otherPac = PacController.GetPacWithCurrentTarget(target);
-                    if (otherPac != null && PacController.myPacs[i].origin.GetDistanceTo(otherPac.origin) <= 2)
+                    if (otherPac != null && PacController.myPacs[i].origin.GetDistanceTo(otherPac.origin) <= 2 && pac.isInCollision)
                     {
-                        target = PacController.myPacs[i].previousTarget;
-                    }
+						target = pac.origin;
+						pac.isOnPath = false;
+						//target = PacController.myPacs[i].previousTarget;
+					}
 				}
-                else
-                {
-                    targets.Add(target);
-                }
+
+                targets.Add(target);
 
                 string command = "";
                 if (pac.cooldown == 0 && pac.shouldActivateSwitch)
@@ -157,6 +158,17 @@ public static class StrategyPicker
 	public static Point GetTargetFromStrategy(ref Pac pac)
 	{
 		Point result = null;
+
+		Pac enemyPac = PacController.GetClosestVisibleEnemy(pac);
+		Point dangerousEnemyOrigin = null;
+		if (enemyPac != null)
+		{
+			dangerousEnemyOrigin = Logic.TreatEnemyAsDanger(pac, enemyPac, pac.currentTarget);
+		}
+		if (pac.currentTarget != null && pac.isOnPath && dangerousEnemyOrigin != null && pac.origin.GetDistanceTo(dangerousEnemyOrigin) > Common.safeDistanceForSpeed)
+		{
+			pac.isOnPath = false;
+		}
 
 		//if in collision, detect if it's friendly or not and act appropriatelly
 		if (pac.isInCollision)
@@ -251,7 +263,12 @@ public class GreedyStrategy : IPacStrategy
 
 		if (target != null)
 		{
-			Common.WriteLine(8, "PacId:" + pac.id + " Strategy: Greedy" + ((target == null) ? "null" : target.ToString()));
+			Pac enemyPac = PacController.GetClosestVisibleEnemy(pac);
+			if (enemyPac == null || (enemyPac != null && pac.origin.GetDistanceTo(enemyPac.origin) > Common.safeDistanceForSpeed))
+			{
+				pac.shouldActivateSpeed = true;
+			}
+			Common.WriteLine(8, "PacId:" + pac.id + " Strategy: Greedy" + ((target == null) ? "null" : target.ToString()) + " speed:" + pac.shouldActivateSpeed.ToString());
 		}
 		return target;
 	}
@@ -298,7 +315,12 @@ public class VisibleStrategy : IPacStrategy
 		}
 		if (target != null)
 		{
-			Common.WriteLine(8, "PacId:" + pac.id + " Strategy: Visible " + ((target == null) ? "null" : target.ToString()));
+			Pac enemyPac = PacController.GetClosestVisibleEnemy(pac);
+			if (enemyPac == null || (enemyPac != null && pac.origin.GetDistanceTo(enemyPac.origin) > Common.safeDistanceForSpeed) && pac.origin.GetDistanceTo(target) >= Common.minDistanceForSpeed)
+			{
+				pac.shouldActivateSpeed = true;
+			}
+			Common.WriteLine(8, "PacId:" + pac.id + " Strategy: Visible " + ((target == null) ? "null" : target.ToString()) + " speed:" + pac.shouldActivateSpeed.ToString());
 		}
 		return target;
 	}
@@ -349,7 +371,13 @@ public class JunctionsStrategy : IPacStrategy
 
 		if (target != null)
 		{
-			Common.WriteLine(8, "PacId:" + pac.id + " Strategy: Junctions " + ((target == null) ? "null" : target.ToString()));
+			Pac enemyPac = PacController.GetClosestVisibleEnemy(pac);
+			if (enemyPac == null || (enemyPac != null && pac.origin.GetDistanceTo(enemyPac.origin) > Common.safeDistanceForSpeed))
+			{
+				pac.shouldActivateSpeed = true;
+			}
+
+			Common.WriteLine(8, "PacId:" + pac.id + " Strategy: Junctions " + ((target == null) ? "null" : target.ToString()) + " speed:" + pac.shouldActivateSpeed.ToString());
 		}
 		return target;
 	}
@@ -381,7 +409,7 @@ public class AttackStrategy : IPacStrategy
 			PacType strongerThanHim = Common.GetStrongerPacType(enemyPac.pacType);
 
 			Common.WriteLine(7, "Attack pacType" + pac.pacType.ToString() + " enemyPacType:" + enemyPac.pacType.ToString() + " cooldown:" + enemyPac.cooldown.ToString());
-			if (enemyPac.cooldown > distanceToEnemy / 2)
+			if (enemyPac.cooldown > distanceToEnemy / 2 && pac.cooldown == 0)
 			{
 				Common.WriteLine(7, "ATTACK! pacType" + pac.pacType.ToString() + " enemyPacType:" + enemyPac.pacType.ToString() + " distance:" + distanceToEnemy.ToString());
 				if (pac.pacType == strongerThanHim)
@@ -744,7 +772,7 @@ public static class Logic
 		Point result = null;
 		PacType strongerThanMe = Common.GetStrongerPacType(myPac.pacType);
 
-		if (myPac.cooldown > 0 && (enemyPac.pacType == strongerThanMe || enemyPac.cooldown == 0))
+		if (myPac.cooldown > (myPac.origin.GetDistanceTo(enemyPac.origin) / 2) && (enemyPac.pacType == strongerThanMe || enemyPac.cooldown == 0))
 		{
 			result = enemyPac.origin;
 		}
@@ -1128,6 +1156,7 @@ public class Pac
 		}
 		else
 		{
+			previousOrigins[0] = origin;
 			previousOrigins[1] = previousOrigins[0];
 		}
 	}
@@ -1213,7 +1242,7 @@ public static class PacController
 					pac.shouldActivateSpeed = false;
 					pac.shouldActivateSwitch = false;
                     pac.isOnHold = false;
-					Common.WriteLine(4, "Synced Pac! Id: " + pac.id.ToString() + " Pac origin: " + pac.origin.ToString());
+					Common.WriteLine(8, "Synced Pac! Id: " + pac.id.ToString() + " Pac origin: " + pac.origin.ToString() + " prOr0:" + pac.GetPreviousOrigin(0) + " prOr1:" + pac.GetPreviousOrigin(1));
 				}
 			}
 		}
@@ -1246,7 +1275,7 @@ public static class PacController
 					pac.SetPreviousOrigins();
 					pac.origin = currentPac.origin;
 					pac.pacType = currentPac.pacType;
-					Common.WriteLine(5, "Synced enemy pac! Id: " + pac.id.ToString() + " Pac origin: " + pac.origin.ToString() + " type:" + pac.pacType.ToString());
+					Common.WriteLine(8, "Synced enemy pac! Id: " + pac.id.ToString() + " Pac origin: " + pac.origin.ToString() + " type:" + pac.pacType.ToString() + " prOr0:" + pac.GetPreviousOrigin(0) + " prOr1:" + pac.GetPreviousOrigin(1));
 				}
 			}
 
@@ -1328,7 +1357,7 @@ public static class PacController
 		foreach (Pac pac in myPacs)
 		{
 			//First turn special case
-			if (pac.previousOrigins.Length == 2 && pac.origin == pac.GetPreviousOrigin(0) && pac.origin == pac.GetPreviousOrigin(1))
+			if (pac.origin == pac.GetPreviousOrigin(0) && pac.origin == pac.GetPreviousOrigin(1))
 			{
 				Common.WriteLine(8, "Collision! Pac id:" + pac.id.ToString());
 				pac.isInCollision = true;
@@ -1351,6 +1380,11 @@ public static class PacController
 		bool collidedWithTeammate = false;
 		foreach (Pac pac in myPacs)
 		{
+			if (pac.id == myPac.id)
+			{
+				continue;
+			}
+
 			if (HaveOppositeDirection(myPac, pac, myPac.currentTarget) && myPac.origin.GetDistanceTo(pac.origin) <= 2 && myPac.isInCollision && pac.isInCollision)
 			{
 				collidedWithTeammate = true;
@@ -1705,6 +1739,8 @@ public static class Common
 	public static readonly int SpeedCooldownDuration = 10;
 	public static readonly int SwitchCooldownDuration = 10;
     public static readonly int minDistanceForSwitch = 3;
+	public static readonly int safeDistanceForSpeed = 6;
+	public static readonly int minDistanceForSpeed = 6;
 
 	public static int CurrentTurn = 0;
 	public static List<int> remainingPacs;
